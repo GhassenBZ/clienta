@@ -1,0 +1,14 @@
+node_modules/
+emp-debug.log
+dist/
+build/
+.env
+.env.local
+.DS_Store
+Thumbs.db
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+destroy.tfplan
