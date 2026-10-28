@@ -91,10 +91,16 @@
         <mxCell id="edge-ebs-snapshots" value="Weekly snapshots" style="endArrow=block;html=1;rounded=0;dashed=1;strokeWidth=1;strokeColor=#759C3E;fontSize=10;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="dlm-policy" target="ebs-volume">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="rt" value="Public route table&#xa;Associated with both public subnets" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E6A700;fontSize=11;" vertex="1" parent="vpc">
+        <mxCell id="rt" value="Public route table → IGW&#xa;Private app route table → S3 gateway endpoint (no NAT)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E6A700;fontSize=11;" vertex="1" parent="vpc">
           <mxGeometry x="770" y="625" width="300" height="75" as="geometry"/>
         </mxCell>
-        <mxCell id="note" value="Not in L3: RDS instance · NAT · S3 · CloudWatch · ALB listener/target group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=12;align=center;" vertex="1" parent="1">
+        <mxCell id="s3-bundle" value="" style="shape=mxgraph.aws4.s3;whiteSpace=wrap;html=1;fillColor=#7AA116;strokeColor=#FFFFFF;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+          <mxGeometry x="55" y="490" width="68" height="68" as="geometry"/>
+        </mxCell>
+        <mxCell id="s3-bundle-label" value="Private S3 app bundle&#xa;Read by LabInstanceProfile only" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=11;fontColor=#232F3E;" vertex="1" parent="1">
+          <mxGeometry x="135" y="495" width="235" height="58" as="geometry"/>
+        </mxCell>
+        <mxCell id="note" value="Terraform-managed S3 bundle · no NAT&#xa;Not in L3: RDS · CloudWatch · ALB listener/target group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=12;align=center;" vertex="1" parent="1">
           <mxGeometry x="950" y="840" width="590" height="55" as="geometry"/>
         </mxCell>
         <mxCell id="edge-browser-internet" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=#444444;" edge="1" parent="1" source="browser" target="internet">

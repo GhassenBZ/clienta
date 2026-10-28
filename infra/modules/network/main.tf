@@ -88,6 +88,43 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
+resource "aws_route_table" "private_app" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name    = "clienta-private-app-rt"
+    Project = "clienta"
+  }
+}
+
+resource "aws_route_table_association" "private_app" {
+  count = length(aws_subnet.private_app)
+
+  subnet_id      = aws_subnet.private_app[count.index].id
+  route_table_id = aws_route_table.private_app.id
+}
+
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.us-east-1.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = [aws_route_table.private_app.id]
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = "*"
+      Action    = "s3:GetObject"
+      Resource  = "${var.artifact_bucket_arn}/clienta-app.tar.gz"
+    }]
+  })
+
+  tags = {
+    Name    = "clienta-s3-gateway-endpoint"
+    Project = "clienta"
+  }
+}
+
 resource "aws_security_group" "alb" {
   name        = "clienta-alb-sg"
   description = "Public ALB security group"
