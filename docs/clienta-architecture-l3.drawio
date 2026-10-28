@@ -43,6 +43,15 @@
         <mxCell id="data1" value="Private data subnet 1&#xa;10.0.21.0/24" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;grStroke=0;strokeColor=#00A4A6;fillColor=#E6F6F7;verticalAlign=top;align=left;spacingLeft=30;fontColor=#147EBA;dashed=0;" vertex="1" parent="az1">
           <mxGeometry x="15" y="455" width="435" height="125" as="geometry"/>
         </mxCell>
+        <mxCell id="rds-sg" value="" style="container=1;collapsible=0;expand=0;recursiveResize=0;html=1;whiteSpace=wrap;strokeColor=#FA4D56;fillColor=none;dashed=1;dashPattern=1 3;strokeWidth=2;" vertex="1" parent="vpc">
+          <mxGeometry x="1115" y="455" width="310" height="82" as="geometry"/>
+        </mxCell>
+        <mxCell id="rds-sg-icon" value="" style="fillColor=#FA4D56;shape=mxgraph.ibm_cloud.group--security;strokeColor=none;dashed=0;outlineConnect=0;html=1;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;part=1;movable=0;resizable=0;rotatable=0;labelPerimeter=1;" vertex="1" parent="rds-sg">
+          <mxGeometry x="14" y="24" width="32" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="rds-sg-label" value="clienta-rds-sg · VPC-level, unattached&#xa;Inbound TCP/3306 from application SG only" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=10;fontColor=#232F3E;" vertex="1" parent="rds-sg">
+          <mxGeometry x="58" y="8" width="240" height="66" as="geometry"/>
+        </mxCell>
         <mxCell id="data2" value="Private data subnet 2&#xa;10.0.22.0/24" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;grStroke=0;strokeColor=#00A4A6;fillColor=#E6F6F7;verticalAlign=top;align=left;spacingLeft=30;fontColor=#147EBA;dashed=0;" vertex="1" parent="az2">
           <mxGeometry x="15" y="455" width="435" height="125" as="geometry"/>
         </mxCell>
@@ -85,7 +94,7 @@
         <mxCell id="rt" value="Public route table&#xa;Associated with both public subnets" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#E6A700;fontSize=11;" vertex="1" parent="vpc">
           <mxGeometry x="770" y="625" width="300" height="75" as="geometry"/>
         </mxCell>
-        <mxCell id="note" value="Not in L3: RDS · NAT · S3 · CloudWatch · ALB listener/target group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=12;align=center;" vertex="1" parent="1">
+        <mxCell id="note" value="Not in L3: RDS instance · NAT · S3 · CloudWatch · ALB listener/target group" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=12;align=center;" vertex="1" parent="1">
           <mxGeometry x="950" y="840" width="590" height="55" as="geometry"/>
         </mxCell>
         <mxCell id="edge-browser-internet" value="" style="endArrow=block;html=1;rounded=0;strokeWidth=2;strokeColor=#444444;" edge="1" parent="1" source="browser" target="internet">

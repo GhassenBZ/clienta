@@ -27,3 +27,8 @@ output "snapshot_policy_id" {
   description = "Data Lifecycle Manager policy ID for weekly EBS snapshots."
   value       = module.compute.snapshot_policy_id
 }
+
+output "rds_security_group_id" {
+  description = "Security group ID reserved for the future RDS instance."
+  value       = module.security.rds_security_group_id
+}

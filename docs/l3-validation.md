@@ -23,7 +23,7 @@ terraform -chdir=infra apply tfplan
 terraform -chdir=infra output
 ```
 
-Review the plan for the `clienta` VPC, subnets, security groups, ALB, EC2 instance, encrypted gp3 root volume, and weekly EBS snapshot lifecycle policy (Sunday at 03:00 UTC; two snapshots retained).
+Review the plan for the `clienta` VPC, subnets, ALB/application/RDS security groups, EC2 instance, encrypted gp3 root volume, and weekly EBS snapshot lifecycle policy (Sunday at 03:00 UTC; two snapshots retained). Confirm the RDS security group allows TCP/3306 only from the application security group; it remains unattached until RDS is added.
 
 ## Destroy
 

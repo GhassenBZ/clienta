@@ -31,3 +31,22 @@ resource "aws_security_group" "app" {
     Project = "clienta"
   }
 }
+
+resource "aws_security_group" "rds" {
+  name        = "clienta-rds-sg"
+  description = "Allow MySQL access only from the application security group"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description     = "MySQL from application instances"
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.app.id]
+  }
+
+  tags = {
+    Name    = "clienta-rds-sg"
+    Project = "clienta"
+  }
+}

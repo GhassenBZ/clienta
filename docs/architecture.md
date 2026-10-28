@@ -36,8 +36,8 @@ The current Terraform configuration creates:
 - two public, two private application, and two private data subnets;
 - an internet gateway and public route table;
 - an internet-facing ALB and its security group;
-- an application security group;
+- an application security group and a pre-created RDS security group that allows MySQL only from the application security group;
 - one EC2 application instance in a private application subnet, with an encrypted gp3 root EBS volume;
 - a Data Lifecycle Manager policy that snapshots the tagged application root volume weekly (Sunday at 03:00 UTC) and retains the two latest snapshots.
 
-RDS, S3 integration, CloudWatch log groups/alarms, and a complete ALB target group/listener are later implementation increments. They are part of the target design, but must not be presented as deployed by this L3 baseline until their Terraform resources are added and tested. DLM snapshots incur storage charges based on the snapshot data retained; the weekly two-snapshot policy limits retention but does not guarantee zero cost.
+The RDS security group is created now for the planned data tier, but it is not attached until the RDS instance is implemented. RDS, S3 integration, CloudWatch log groups/alarms, and a complete ALB target group/listener are later implementation increments. They are part of the target design, but must not be presented as deployed by this L3 baseline until their Terraform resources are added and tested. DLM snapshots incur storage charges based on the snapshot data retained; the weekly two-snapshot policy limits retention but does not guarantee zero cost.
