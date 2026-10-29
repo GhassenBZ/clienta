@@ -27,3 +27,13 @@ output "rds_security_group_id" {
   description = "Security group ID reserved for the future RDS instance."
   value       = module.security.rds_security_group_id
 }
+
+output "app_ami_id" {
+  description = "AMI used by the private application EC2 instance."
+  value       = module.compute.app_ami_id
+}
+
+output "image_builder_instance_id" {
+  description = "Temporary AMI builder ID; save it locally before the cleanup apply."
+  value       = module.compute.image_builder_instance_id
+}

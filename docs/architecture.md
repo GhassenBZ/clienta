@@ -37,8 +37,12 @@ The current Terraform configuration creates:
 - an internet gateway and public route table;
 - an internet-facing ALB and its security group;
 - an application security group and a pre-created RDS security group that allows MySQL only from the application security group;
-- one EC2 instance using Amazon Linux 2023 in a private application subnet, with an encrypted gp3 root EBS volume.
+- a temporary public EC2 image builder that installs Node.js and the application, then is removed in a follow-up Terraform apply;
+- a Terraform-managed application AMI created from that builder;
+- one EC2 instance in a private application subnet, launched from the application AMI with an encrypted gp3 root EBS volume.
 
-The private application and data subnets have no internet route. The EC2 instance is an infrastructure baseline only: it does not yet install or run the Clienta application. The public ALB has no listener, target group, or registered target yet, so it is not serving application traffic.
+The private application and data subnets have no internet route. The public builder needs outbound internet access to install packages and fetch the public application repository. Terraform waits for a successful cloud-init marker before creating the AMI. The AMI contains no database credentials; its systemd service starts only when `/etc/clienta/clienta.env` exists. A future launch template must write that file and start the service, allowing database settings to be supplied without baking secrets into the image.
 
-The RDS security group is created for the planned data tier but is not attached until the RDS instance is implemented. RDS, S3 artifact deployment, CloudWatch log groups/alarms, and complete ALB listener/target configuration are later increments. Do not present them as deployed by this L3 baseline until their Terraform resources are added and tested.
+The AMI is the machine image used to launch EC2 instances. When Auto Scaling is added, a launch template can reference this AMI and the Auto Scaling group can launch instances from that template. Neither a launch template nor an Auto Scaling group exists yet. The public ALB also has no listener, target group, or registered target, so it is not serving application traffic.
+
+The builder lifecycle uses two applies: one to build the AMI, and another with the builder ID saved in the ignored local `infra/terraform.tfvars` file to terminate the builder while retaining the AMI in Terraform state. The RDS security group is created for the planned data tier but is not attached until the RDS instance is implemented. RDS, S3 artifact deployment, CloudWatch log groups/alarms, and complete ALB listener/target configuration are later increments. Do not present them as deployed by this baseline until their Terraform resources are added and tested.

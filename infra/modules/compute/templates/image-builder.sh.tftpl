@@ -1,0 +1,38 @@
+#!/bin/bash
+set -Eeuo pipefail
+
+exec > >(tee -a /var/log/clienta-image-build.log /dev/console) 2>&1
+trap 'status=$?; echo "CLIENTA_IMAGE_BUILD_FAILED=$status" > /dev/console; exit "$status"' ERR
+
+dnf install -y nodejs npm git
+git clone --depth 1 --branch "${app_repository_ref}" https://github.com/GhassenBZ/clienta.git /opt/clienta
+
+cd /opt/clienta/app/backend
+npm ci --omit=dev --legacy-peer-deps
+
+install -d -o root -g root -m 0755 /etc/clienta
+cat > /etc/systemd/system/clienta.service <<'UNIT'
+[Unit]
+Description=Clienta web application
+After=network.target
+ConditionPathExists=/etc/clienta/clienta.env
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/opt/clienta/app/backend
+Environment=NODE_ENV=production
+EnvironmentFile=/etc/clienta/clienta.env
+ExecStart=/usr/bin/node /opt/clienta/app/backend/app.js
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+chmod -R a+rX /opt/clienta
+systemctl daemon-reload
+systemctl enable clienta.service
+
+echo "CLIENTA_IMAGE_BUILD_READY" > /dev/console

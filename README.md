@@ -21,11 +21,19 @@ aws sts get-caller-identity
 terraform -chdir=infra init
 terraform -chdir=infra fmt -recursive
 terraform -chdir=infra validate
-terraform -chdir=infra plan -out=tfplan
-terraform -chdir=infra apply tfplan
 ```
 
-Terraform creates the VPC, public and private subnets, internet gateway and public route table, internet-facing ALB, security groups, and one EC2 instance in a private application subnet. The EC2 instance uses the latest matching Amazon Linux 2023 AMI; application deployment, RDS, and ALB listener/target configuration are not part of this L3 infrastructure baseline yet.
+To build the application AMI and remove the temporary public builder, run the helper from Git Bash:
+
+```bash
+./scripts/build-ami.sh
+```
+
+The script validates and initializes Terraform, then runs the build and cleanup plans/applies in sequence. Terraform asks you to confirm each apply. The first apply creates a temporary EC2 builder in a public subnet. It installs Node.js, downloads the public `main` branch of this repository, installs production dependencies, and prepares a systemd service. Terraform waits for the builder's cloud-init success marker before creating the AMI; the private application EC2 instance is launched from that image.
+
+The script saves the builder ID in the ignored `infra/ami-builder.auto.tfvars` file before planning cleanup. Keep that file for later Terraform operations so the AMI remains managed after the builder is removed. If you decline or the cleanup step fails, rerun the cleanup plan and apply from `infra` with `terraform plan -out=ami-cleanup.tfplan` and `terraform apply ami-cleanup.tfplan`. To build a replacement image later, run `./scripts/build-ami.sh` again.
+
+The image contains the application files and production Node.js dependencies, but no database credentials. Its systemd service starts only when `/etc/clienta/clienta.env` exists; a future launch template must write that file and start the service with the RDS connection settings. RDS, a launch template/Auto Scaling group, and ALB listener/target configuration are not implemented yet, so the app is not currently reachable through the ALB.
 
 Destroy the lab resources before the session ends:
 
