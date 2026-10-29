@@ -23,11 +23,6 @@ output "private_app_route_table_id" {
   value       = aws_route_table.private_app.id
 }
 
-output "s3_gateway_endpoint_id" {
-  description = "S3 gateway endpoint used by private application subnets."
-  value       = aws_vpc_endpoint.s3.id
-}
-
 output "alb_dns_name" {
   description = "DNS name of the application load balancer."
   value       = aws_lb.main.dns_name

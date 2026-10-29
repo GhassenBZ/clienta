@@ -23,21 +23,6 @@ output "instance_ids" {
   value       = module.compute.instance_ids
 }
 
-output "snapshot_policy_id" {
-  description = "Data Lifecycle Manager policy ID for weekly EBS snapshots."
-  value       = module.compute.snapshot_policy_id
-}
-
-output "artifact_bucket_name" {
-  description = "Private S3 bucket containing the packaged application."
-  value       = aws_s3_bucket.artifacts.id
-}
-
-output "s3_gateway_endpoint_id" {
-  description = "S3 gateway endpoint for private application subnet access."
-  value       = module.network.s3_gateway_endpoint_id
-}
-
 output "rds_security_group_id" {
   description = "Security group ID reserved for the future RDS instance."
   value       = module.security.rds_security_group_id

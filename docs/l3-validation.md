@@ -17,14 +17,15 @@ The L3 baseline must validate before any AWS resources are created.
 From the repository root, after updating the temporary AWS Academy credentials and verifying the identity:
 
 ```powershell
-.\scripts\package-app.ps1
 terraform -chdir=infra init
 terraform -chdir=infra plan -out=tfplan
 terraform -chdir=infra apply tfplan
 terraform -chdir=infra output
 ```
 
-Run the packaging script from the repository root before planning; it requires `npm` and downloads the pinned Linux Node.js runtime with checksum verification. Review the plan for the private artifact bucket/object, S3 gateway endpoint and private app route table, existing `LabInstanceProfile`, app EC2 instance, encrypted gp3 root volume, and weekly EBS snapshot lifecycle policy (Sunday at 03:00 UTC; two snapshots retained). Confirm the bucket blocks public access and only the profile role is granted `GetObject`. The private app subnet has no NAT route. Confirm the RDS security group allows TCP/3306 only from the application security group; it remains unattached until RDS is added.
+Review the plan for the VPC, six subnets, public route table and internet gateway, ALB, application and RDS security groups, and one EC2 instance in a private application subnet. The EC2 root volume is encrypted gp3. Confirm the RDS security group allows TCP/3306 only from the application security group; it remains unattached until RDS is added.
+
+This baseline only creates infrastructure. The EC2 instance uses a stock Amazon Linux AMI and does not yet install the app. The ALB also has no listener or target group, so it is not expected to serve traffic.
 
 ## Destroy
 

@@ -37,11 +37,8 @@ The current Terraform configuration creates:
 - an internet gateway and public route table;
 - an internet-facing ALB and its security group;
 - an application security group and a pre-created RDS security group that allows MySQL only from the application security group;
-- a private, Terraform-managed S3 bucket containing the packaged app, production dependencies, and Linux Node.js runtime;
-- an S3 gateway endpoint on the private application route table, allowing the app instance to fetch the bundle without NAT;
-- one EC2 application instance in a private application subnet, with an encrypted gp3 root EBS volume and the AWS Academy instance profile;
-- a Data Lifecycle Manager policy that snapshots the tagged application root volume weekly (Sunday at 03:00 UTC) and retains the two latest snapshots.
+- one EC2 instance using Amazon Linux 2023 in a private application subnet, with an encrypted gp3 root EBS volume.
 
-Run `scripts/package-app.ps1` before Terraform planning. It installs production dependencies locally, adds a checksum-verified Linux Node.js runtime, and creates the deployment archive while excluding `.env` files. Terraform uploads the archive; the instance profile can read only that object, and the private S3 gateway endpoint has no hourly charge. The instance requires no NAT route or internet access for bootstrapping. Destroy removes the EC2 instance, endpoint, bucket, and artifact.
+The private application and data subnets have no internet route. The EC2 instance is an infrastructure baseline only: it does not yet install or run the Clienta application. The public ALB has no listener, target group, or registered target yet, so it is not serving application traffic.
 
-The RDS security group is created now for the planned data tier, but it is not attached until the RDS instance is implemented. RDS, CloudWatch log groups/alarms, and a complete ALB target group/listener are later implementation increments. They are part of the target design, but must not be presented as deployed by this L3 baseline until their Terraform resources are added and tested. DLM snapshots incur storage charges based on the snapshot data retained; the weekly two-snapshot policy limits retention but does not guarantee zero cost.
+The RDS security group is created for the planned data tier but is not attached until the RDS instance is implemented. RDS, S3 artifact deployment, CloudWatch log groups/alarms, and complete ALB listener/target configuration are later increments. Do not present them as deployed by this L3 baseline until their Terraform resources are added and tested.
