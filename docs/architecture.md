@@ -37,8 +37,10 @@ The current Terraform configuration creates:
 - an internet gateway and public route table;
 - an internet-facing ALB and its security group;
 - an application security group and a pre-created RDS security group that allows MySQL only from the application security group;
-- one EC2 instance using Amazon Linux 2023 in a private application subnet, with an encrypted gp3 root EBS volume.
+- a private S3 bucket (provisioned via a CloudFormation stack to prevent LabRole Object Lock read permission blocks) containing the packaged app, production dependencies, and Linux Node.js runtime;
+- an S3 gateway endpoint on the private application route table, allowing the app instance to fetch the bundle without NAT;
+- one EC2 application instance in a private application subnet, with an encrypted gp3 root EBS volume and the AWS Academy instance profile.
 
-The private application and data subnets have no internet route. The EC2 instance is an infrastructure baseline only: it does not yet install or run the Clienta application. The public ALB has no listener, target group, or registered target yet, so it is not serving application traffic.
+Run `scripts/package-app.ps1` before Terraform planning. It installs production dependencies locally, adds a checksum-verified Linux Node.js runtime, and creates the deployment archive while excluding `.env` files. Terraform uploads the archive; the instance profile can read only that object, and the private S3 gateway endpoint has no hourly charge. The instance requires no NAT route or internet access for bootstrapping. Destroy removes the EC2 instance, endpoint, bucket, and artifact.
 
-The RDS security group is created for the planned data tier but is not attached until the RDS instance is implemented. RDS, S3 artifact deployment, CloudWatch log groups/alarms, and complete ALB listener/target configuration are later increments. Do not present them as deployed by this L3 baseline until their Terraform resources are added and tested.
+The RDS security group is created now for the planned data tier, but it is not attached until the RDS instance is implemented. RDS, CloudWatch log groups/alarms, and complete ALB listener/target configuration are later increments. Do not present them as deployed by this L3 baseline until their Terraform resources are added and tested.

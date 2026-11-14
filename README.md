@@ -14,10 +14,11 @@ The frontend uses the same-origin `/api/customers` path. Keep the frontend and A
 
 Terraform uses the AWS provider's default credential chain. Put the temporary AWS Academy credentials in the local AWS CLI credentials file at `%USERPROFILE%\.aws\credentials`; do not put them in this repository.
 
-After starting the lab, update the `default` profile in that file. From the repository root:
+After starting the lab, update the `default` profile in that file. From the repository root, package the app before planning:
 
 ```powershell
 aws sts get-caller-identity
+.\scripts\package-app.ps1
 terraform -chdir=infra init
 terraform -chdir=infra fmt -recursive
 terraform -chdir=infra validate
@@ -25,7 +26,7 @@ terraform -chdir=infra plan -out=tfplan
 terraform -chdir=infra apply tfplan
 ```
 
-Terraform creates the VPC, public and private subnets, internet gateway and public route table, internet-facing ALB, security groups, and one EC2 instance in a private application subnet. The EC2 instance uses the latest matching Amazon Linux 2023 AMI; application deployment, RDS, and ALB listener/target configuration are not part of this L3 infrastructure baseline yet.
+The packaging step needs `npm` and internet access on the developer workstation. It builds production dependencies, downloads a checksum-verified Linux Node.js runtime, excludes `.env` files, and writes `build\clienta-app.tar.gz`. Terraform creates a private S3 artifact bucket (via a CloudFormation stack to seamlessly bypass AWS Academy Object Lock permission restrictions) and uploads that archive. The app instance reads it through the S3 gateway endpoint using the existing `LabInstanceProfile`; no NAT gateway or custom IAM role is created for the artifact access.
 
 Destroy the lab resources before the session ends:
 
