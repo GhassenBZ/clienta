@@ -6,7 +6,7 @@ This note describes the current code in this branch. It does not mean the Terraf
 
 - The deployment now uses Vikunja v2.8.0 instead of packaging the old Clienta application.
 - `scripts/package-app.ps1` verifies the pinned Vikunja server and source archives, builds the browser frontend, and creates two artifacts: `build/vikunja-frontend.tar.gz` and `build/vikunja-backend.tar.gz`.
-- The frontend bundle contains static browser assets and the Nginx configuration. The backend bundle contains the Vikunja server binary, its license, and the demo seeder/data.
+- The frontend bundle contains static browser assets and the bundled Python static server. The backend bundle contains the Vikunja server binary, its license, and the demo seeder/data.
 - The package script requires Windows PowerShell, `tar.exe`, Node.js 24 or newer, pnpm 12.16.1, and internet access.
 
 ## AWS architecture

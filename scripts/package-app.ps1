@@ -150,8 +150,8 @@ Copy-Item -LiteralPath (Join-Path $repoRoot "vikunja\seed-demo.py") -Destination
 Copy-Item -LiteralPath (Join-Path $repoRoot "vikunja\demo-data.json") -Destination $backendVikunjaDir
 Copy-Item -LiteralPath $backendLicense[0].FullName -Destination (Join-Path $backendVikunjaDir "LICENSE.vikunja")
 Copy-Item -LiteralPath (Join-Path $frontendSource "LICENSE") -Destination (Join-Path $frontendStageDir "LICENSE.vikunja-frontend")
+Copy-Item -LiteralPath (Join-Path $repoRoot "vikunja\serve_frontend.py") -Destination $frontendStageDir
 Copy-Item -Path (Join-Path $frontendDist "*") -Destination $frontendWebDir -Recurse -Force
-Copy-Item -LiteralPath (Join-Path $repoRoot "vikunja\nginx.conf") -Destination (Join-Path $frontendStageDir "nginx.conf")
 
 New-DeterministicTarGz -SourceDirectory $backendStageDir -ArchivePath $backendArchivePath
 New-DeterministicTarGz -SourceDirectory $frontendStageDir -ArchivePath $frontendArchivePath

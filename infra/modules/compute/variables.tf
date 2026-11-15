@@ -1,5 +1,5 @@
 variable "frontend_subnet_ids" {
-  description = "Public subnets used by the static frontend Auto Scaling group."
+  description = "Private application subnets used by the static frontend Auto Scaling group."
   type        = list(string)
 }
 

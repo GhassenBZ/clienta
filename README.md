@@ -47,7 +47,7 @@ terraform -chdir=infra output -raw alb_dns_name
 
 - Public HTTP Application Load Balancer in two public subnets.
 - Separate frontend and backend EC2 Auto Scaling groups, each spanning two Availability Zones, with a minimum and desired capacity of two and a maximum of four.
-- The frontend ASG runs Nginx in public subnets; instances accept HTTP only from the ALB. The backend ASG runs Vikunja's API in private application subnets.
+- The frontend and backend ASGs run in private application subnets. Frontend instances have no public IP and serve static files with the bundled Python standard-library server; their security group accepts HTTP only from the ALB. Backend instances run Vikunja's API.
 - The ALB serves the frontend by default and routes `/api/*`, `/dav*`, and `/.well-known/caldav*` to the backend target group.
 - CPU target-tracking policies scale each ASG toward 60% average utilization. Launch-template changes use rolling instance refreshes.
 - Private MySQL 8.0 RDS in the data subnets.

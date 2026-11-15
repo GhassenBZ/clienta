@@ -166,7 +166,7 @@ module "database" {
 module "compute" {
   source = "./modules/compute"
 
-  frontend_subnet_ids        = module.network.public_subnet_ids
+  frontend_subnet_ids        = module.network.private_app_subnet_ids
   backend_subnet_ids         = module.network.private_app_subnet_ids
   frontend_security_group_id = module.security.frontend_security_group_id
   backend_security_group_id  = module.security.backend_security_group_id
