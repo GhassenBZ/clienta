@@ -17,7 +17,7 @@ The credentials are temporary and include an access key, secret key, and session
 
 ## Cost discipline
 
-The lab baseline uses small resources and the fixed `clienta` prefix. Before applying, review the plan and confirm the current AWS region is `us-east-1`.
+The lab baseline uses small resources and the fixed `vikunja` prefix. Before applying, review the plan and confirm the current AWS region is `us-east-1`.
 
 At the end of the session:
 

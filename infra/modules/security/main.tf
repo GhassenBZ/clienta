@@ -1,10 +1,36 @@
-resource "aws_security_group" "app" {
-  name        = "clienta-app-sg"
-  description = "Security group for EC2 application instances"
+resource "aws_security_group" "frontend" {
+  name        = "vikunja-frontend-sg"
+  description = "Security group for frontend Auto Scaling instances"
   vpc_id      = var.vpc_id
 
   ingress {
-    description     = "Allow traffic from the ALB on application port"
+    description     = "Allow HTTP traffic from the ALB"
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [var.alb_security_group_id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name    = "vikunja-frontend-sg"
+    Project = "vikunja"
+  }
+}
+
+resource "aws_security_group" "backend" {
+  name        = "vikunja-backend-sg"
+  description = "Security group for Vikunja API Auto Scaling instances"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description     = "Allow API traffic from the ALB"
     from_port       = 8080
     to_port         = 8080
     protocol        = "tcp"
@@ -12,7 +38,7 @@ resource "aws_security_group" "app" {
   }
 
   ingress {
-    description = "Allow SSH from designated admin subnet or office range"
+    description = "Allow SSH from the VPC"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
@@ -27,26 +53,26 @@ resource "aws_security_group" "app" {
   }
 
   tags = {
-    Name    = "clienta-app-sg"
-    Project = "clienta"
+    Name    = "vikunja-backend-sg"
+    Project = "vikunja"
   }
 }
 
 resource "aws_security_group" "rds" {
-  name        = "clienta-rds-sg"
-  description = "Allow MySQL access only from the application security group"
+  name        = "vikunja-rds-sg"
+  description = "Allow MySQL access only from the Vikunja API security group"
   vpc_id      = var.vpc_id
 
   ingress {
-    description     = "MySQL from application instances"
+    description     = "MySQL from Vikunja API instances"
     from_port       = 3306
     to_port         = 3306
     protocol        = "tcp"
-    security_groups = [aws_security_group.app.id]
+    security_groups = [aws_security_group.backend.id]
   }
 
   tags = {
-    Name    = "clienta-rds-sg"
-    Project = "clienta"
+    Name    = "vikunja-rds-sg"
+    Project = "vikunja"
   }
 }

@@ -2,105 +2,169 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $buildDir = Join-Path $repoRoot "build"
-$stageDir = Join-Path $buildDir "clienta-app-stage"
-$archivePath = Join-Path $buildDir "clienta-app.tar.gz"
-$nodeArchive = Join-Path $buildDir "node-v24.22.2-linux-x64.tar.gz"
-$nodeExtractDir = Join-Path $buildDir "clienta-node-runtime"
-$nodeFolder = "node-v24.22.2-linux-x64"
-$nodeUrl = "https://nodejs.org/dist/v24.22.2/${nodeFolder}.tar.gz"
-$nodeSha256 = "361718c444e49af2ca5a110c83ba6a8901143f23ab285ebbef0341f391f482a9"
+$backendStageDir = Join-Path $buildDir "vikunja-backend-stage"
+$frontendStageDir = Join-Path $buildDir "vikunja-frontend-stage"
+$releaseDir = Join-Path $buildDir "vikunja-release"
+$sourceDir = Join-Path $buildDir "vikunja-source"
+$backendArchivePath = Join-Path $buildDir "vikunja-backend.tar.gz"
+$frontendArchivePath = Join-Path $buildDir "vikunja-frontend.tar.gz"
+$legacyArchivePath = Join-Path $buildDir "vikunja-app.tar.gz"
+$releaseArchive = Join-Path $buildDir "vikunja-v2.8.0-linux-amd64-full.zip"
+$sourceArchive = Join-Path $buildDir "vikunja-v2.8.0-source.zip"
+$releaseUrl = "https://github.com/go-vikunja/vikunja/releases/download/v2.8.0/vikunja-v2.8.0-linux-amd64-full.zip"
+$sourceUrl = "https://github.com/go-vikunja/vikunja/archive/refs/tags/v2.8.0.zip"
+$releaseSha256 = "0b6ba2934bd432eefaa4209b0f96d20b7f7cd7f7be0269dd79071979c4363423"
+$sourceSha256 = "59ac49e27ab346d07c5db324083d16392e8de338486dd32d26a008f40653e4f8"
 
-function Copy-DeploymentFiles {
+function New-DeterministicTarGz {
     param(
-        [Parameter(Mandatory = $true)]
-        [string]$Source,
-
-        [Parameter(Mandatory = $true)]
-        [string]$Destination
+        [string]$SourceDirectory,
+        [string]$ArchivePath
     )
 
-    New-Item -ItemType Directory -Path $Destination -Force | Out-Null
-    foreach ($item in Get-ChildItem -LiteralPath $Source -Force) {
-        if ($item.Name -eq "node_modules" -or $item.Name -like ".env*") {
-            continue
-        }
+    $normalizedTimestamp = [datetime]::Parse("2020-01-01T00:00:00Z").ToUniversalTime()
+    $stagedEntries = @(Get-ChildItem -LiteralPath $SourceDirectory -Recurse -Force) + @((Get-Item -LiteralPath $SourceDirectory))
+    foreach ($entry in $stagedEntries) {
+        $entry.LastWriteTimeUtc = $normalizedTimestamp
+    }
 
-        Copy-Item -LiteralPath $item.FullName -Destination $Destination -Recurse -Force
+    & "$env:SystemRoot\System32\tar.exe" -czf $ArchivePath -C $SourceDirectory .
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to create bundle $ArchivePath."
+    }
+
+    $archiveStream = [System.IO.File]::OpenWrite($ArchivePath)
+    try {
+        $archiveStream.Position = 4
+        $zeroTimestamp = [byte[]](0, 0, 0, 0)
+        $archiveStream.Write($zeroTimestamp, 0, $zeroTimestamp.Length)
+    }
+    finally {
+        $archiveStream.Dispose()
     }
 }
 
-if (Test-Path -LiteralPath $archivePath) {
-    Remove-Item -LiteralPath $archivePath -Force
-}
-if (Test-Path -LiteralPath $stageDir) {
-    Remove-Item -LiteralPath $stageDir -Recurse -Force
-}
-if (Test-Path -LiteralPath $nodeArchive) {
-    Remove-Item -LiteralPath $nodeArchive -Force
-}
-if (Test-Path -LiteralPath $nodeExtractDir) {
-    Remove-Item -LiteralPath $nodeExtractDir -Recurse -Force
+New-Item -ItemType Directory -Path $buildDir -Force | Out-Null
+foreach ($path in @(
+        $backendArchivePath,
+        $frontendArchivePath,
+        $legacyArchivePath,
+        $releaseArchive,
+        $sourceArchive,
+        $backendStageDir,
+        $frontendStageDir,
+        $releaseDir,
+        $sourceDir
+    )) {
+    if (Test-Path -LiteralPath $path) {
+        Remove-Item -LiteralPath $path -Recurse -Force
+    }
 }
 
-New-Item -ItemType Directory -Path $stageDir -Force | Out-Null
-Copy-DeploymentFiles (Join-Path $repoRoot "app\backend") (Join-Path $stageDir "app\backend")
-Copy-DeploymentFiles (Join-Path $repoRoot "app\frontend") (Join-Path $stageDir "app\frontend")
-Copy-DeploymentFiles (Join-Path $repoRoot "app\database") (Join-Path $stageDir "app\database")
+$nodeCommand = Get-Command node.cmd -ErrorAction SilentlyContinue
+if (-not $nodeCommand) {
+    $nodeCommand = Get-Command node.exe -ErrorAction SilentlyContinue
+}
+if (-not $nodeCommand) {
+    throw "Node.js 24 or newer is required to build the Vikunja frontend."
+}
+$nodeVersion = (& $nodeCommand.Source --version).Trim().TrimStart("v")
+if ($LASTEXITCODE -ne 0 -or [version]$nodeVersion -lt [version]"24.0") {
+    throw "Vikunja v2.8.0 frontend requires Node.js 24 or newer; found $nodeVersion."
+}
 
-Push-Location (Join-Path $stageDir "app\backend")
+$pnpmCommand = Get-Command pnpm.cmd -ErrorAction SilentlyContinue
+if (-not $pnpmCommand) {
+    $pnpmCommand = Get-Command pnpm -ErrorAction SilentlyContinue
+}
+if (-not $pnpmCommand) {
+    throw "pnpm 12.16.1 is required to build the Vikunja frontend."
+}
+$pnpmVersion = (& $pnpmCommand.Source --version).Trim()
+if ($LASTEXITCODE -ne 0 -or $pnpmVersion -ne "12.16.1") {
+    throw "The Vikunja frontend requires pnpm 12.16.1; found $pnpmVersion."
+}
+
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Invoke-WebRequest -Uri $releaseUrl -OutFile $releaseArchive -UseBasicParsing
+$actualReleaseSha256 = (Get-FileHash -LiteralPath $releaseArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($actualReleaseSha256 -ne $releaseSha256) {
+    throw "Vikunja release checksum mismatch: expected $releaseSha256, received $actualReleaseSha256."
+}
+
+Invoke-WebRequest -Uri $sourceUrl -OutFile $sourceArchive -UseBasicParsing
+$actualSourceSha256 = (Get-FileHash -LiteralPath $sourceArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($actualSourceSha256 -ne $sourceSha256) {
+    throw "Vikunja source checksum mismatch: expected $sourceSha256, received $actualSourceSha256."
+}
+
+New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
+New-Item -ItemType Directory -Path $sourceDir -Force | Out-Null
+Expand-Archive -LiteralPath $releaseArchive -DestinationPath $releaseDir -Force
+Expand-Archive -LiteralPath $sourceArchive -DestinationPath $sourceDir -Force
+
+$binary = @(Get-ChildItem -LiteralPath $releaseDir -Recurse -File | Where-Object { $_.Name -eq "vikunja-v2.8.0-linux-amd64" })
+$backendLicense = @(Get-ChildItem -LiteralPath $releaseDir -Recurse -File | Where-Object { $_.Name -eq "LICENSE" })
+if ($binary.Count -ne 1 -or $backendLicense.Count -ne 1) {
+    throw "The verified Vikunja server release did not contain exactly one binary and license."
+}
+
+$sourceRoot = Join-Path $sourceDir "vikunja-2.8.0"
+$frontendSource = Join-Path $sourceRoot "frontend"
+$frontendLicense = Join-Path $frontendSource "LICENSE"
+if (-not (Test-Path -LiteralPath $frontendLicense)) {
+    throw "The pinned Vikunja source archive does not contain the frontend license."
+}
+
+Push-Location $frontendSource
 try {
-    & npm.cmd ci --omit=dev --legacy-peer-deps
+    & $pnpmCommand.Source install --frozen-lockfile
     if ($LASTEXITCODE -ne 0) {
-        throw "npm ci failed with exit code $LASTEXITCODE."
+        throw "Failed to install the pinned Vikunja frontend dependencies."
+    }
+    # The upstream lockfile omits Rolldown's optional Windows binary during pnpm install.
+    & $pnpmCommand.Source add --save-dev --save-exact @rolldown/binding-win32-x64-msvc@1.2.14
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to install the pinned Windows frontend build binding."
+    }
+    & $pnpmCommand.Source run build
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to build the Vikunja frontend."
     }
 }
 finally {
     Pop-Location
 }
 
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Invoke-WebRequest -Uri $nodeUrl -OutFile $nodeArchive -UseBasicParsing
-$actualSha256 = (Get-FileHash -LiteralPath $nodeArchive -Algorithm SHA256).Hash.ToLowerInvariant()
-if ($actualSha256 -ne $nodeSha256) {
-    throw "Node.js archive checksum mismatch: expected $nodeSha256, received $actualSha256."
+$frontendDist = Join-Path $frontendSource "dist"
+if (-not (Test-Path -LiteralPath (Join-Path $frontendDist "index.html"))) {
+    throw "The Vikunja frontend build did not produce dist/index.html."
 }
 
-New-Item -ItemType Directory -Path $nodeExtractDir -Force | Out-Null
-& "$env:SystemRoot\System32\tar.exe" -xzf $nodeArchive -C $nodeExtractDir "$nodeFolder/bin/node" "$nodeFolder/LICENSE"
-if ($LASTEXITCODE -ne 0) {
-    throw "Failed to extract the verified Node.js runtime archive."
+$backendVikunjaDir = Join-Path $backendStageDir "vikunja"
+$frontendWebDir = Join-Path $frontendStageDir "www"
+New-Item -ItemType Directory -Path $backendVikunjaDir -Force | Out-Null
+New-Item -ItemType Directory -Path $frontendWebDir -Force | Out-Null
+Copy-Item -LiteralPath $binary[0].FullName -Destination (Join-Path $backendVikunjaDir "vikunja")
+Copy-Item -LiteralPath (Join-Path $repoRoot "vikunja\seed-demo.py") -Destination $backendVikunjaDir
+Copy-Item -LiteralPath (Join-Path $repoRoot "vikunja\demo-data.json") -Destination $backendVikunjaDir
+Copy-Item -LiteralPath $backendLicense[0].FullName -Destination (Join-Path $backendVikunjaDir "LICENSE.vikunja")
+Copy-Item -LiteralPath (Join-Path $frontendSource "LICENSE") -Destination (Join-Path $frontendStageDir "LICENSE.vikunja-frontend")
+Copy-Item -Path (Join-Path $frontendDist "*") -Destination $frontendWebDir -Recurse -Force
+Copy-Item -LiteralPath (Join-Path $repoRoot "vikunja\nginx.conf") -Destination (Join-Path $frontendStageDir "nginx.conf")
+
+New-DeterministicTarGz -SourceDirectory $backendStageDir -ArchivePath $backendArchivePath
+New-DeterministicTarGz -SourceDirectory $frontendStageDir -ArchivePath $frontendArchivePath
+
+$backendBundleHash = (Get-FileHash -LiteralPath $backendArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+$frontendBundleHash = (Get-FileHash -LiteralPath $frontendArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+Write-Output "Created $backendArchivePath"
+Write-Output "Backend bundle SHA-256: $backendBundleHash"
+Write-Output "Created $frontendArchivePath"
+Write-Output "Frontend bundle SHA-256: $frontendBundleHash"
+Write-Output "Vikunja release SHA-256: $releaseSha256"
+Write-Output "Vikunja source SHA-256: $sourceSha256"
+
+foreach ($path in @($releaseArchive, $sourceArchive, $backendStageDir, $frontendStageDir, $releaseDir, $sourceDir)) {
+    Remove-Item -LiteralPath $path -Recurse -Force
 }
-
-$runtimeDir = Join-Path $stageDir "runtime"
-New-Item -ItemType Directory -Path $runtimeDir -Force | Out-Null
-Copy-Item -LiteralPath (Join-Path $nodeExtractDir "$nodeFolder/bin/node") -Destination (Join-Path $runtimeDir "node")
-Copy-Item -LiteralPath (Join-Path $nodeExtractDir "$nodeFolder/LICENSE") -Destination (Join-Path $runtimeDir "LICENSE.node")
-
-$normalizedTimestamp = [datetime]::Parse("2020-01-01T00:00:00Z").ToUniversalTime()
-$stagedEntries = @(Get-ChildItem -LiteralPath $stageDir -Recurse -Force) + @((Get-Item -LiteralPath $stageDir))
-foreach ($entry in $stagedEntries) {
-    $entry.LastWriteTimeUtc = $normalizedTimestamp
-}
-
-& "$env:SystemRoot\System32\tar.exe" -czf $archivePath -C $stageDir .
-if ($LASTEXITCODE -ne 0) {
-    throw "Failed to create the application bundle."
-}
-
-$archiveStream = [System.IO.File]::OpenWrite($archivePath)
-try {
-    $archiveStream.Position = 4
-    $zeroTimestamp = [byte[]](0, 0, 0, 0)
-    $archiveStream.Write($zeroTimestamp, 0, $zeroTimestamp.Length)
-}
-finally {
-    $archiveStream.Dispose()
-}
-
-Remove-Item -LiteralPath $nodeArchive -Force
-Remove-Item -LiteralPath $nodeExtractDir -Recurse -Force
-Remove-Item -LiteralPath $stageDir -Recurse -Force
-
-$bundleHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-Write-Output "Created $archivePath"
-Write-Output "SHA-256: $bundleHash"

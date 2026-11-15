@@ -12,6 +12,6 @@ pause_on_exit() {
 }
 trap pause_on_exit EXIT
 
-echo "Destroying Terraform-managed Clienta infrastructure"
+echo "Destroying Terraform-managed Vikunja infrastructure"
 
 terraform -chdir="$(dirname "$0")/../infra" destroy -auto-approve

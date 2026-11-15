@@ -1,22 +1,29 @@
-# Clienta
+# Vikunja on AWS
 
-Clienta is a three-tier customer management app with a browser frontend, an Express API, and a MySQL database.
+This branch deploys the official Vikunja v2.8.0 server with a private MySQL database and a small, pre-seeded workspace. The seed creates real database-backed accounts, shared projects, Kanban tasks, labels, assignments, comments, and dated tasks for the Gantt view.
 
-Project implementation status against the seven deliverables in the cahier des charges is summarized in [docs/final-project-summary.md](./docs/final-project-summary.md).
+## Demo accounts
 
-## Run locally
+All four accounts use the same disposable lab password:
 
-Start the app from `app/backend` with `npm start`. It reads database settings from `app/backend/.env`, creates the customer table when the database is available, and serves both the frontend and API on port 8080. Open `http://localhost:8080` to use the app. Copy the root `.env.example` to `app/backend/.env`, set your local database credentials, and create the configured MySQL database before starting.
+| Username | Display name |
+| --- | --- |
+| `lisa.chen` | Lisa Chen |
+| `marco.rossi` | Marco Rossi |
+| `amina.khan` | Amina Khan |
+| `noah.martin` | Noah Martin |
 
-## Deployment
+**Password for each account:** `VikunjaDemo2026`
 
-The frontend uses the same-origin `/api/customers` path. Currently Express serves the frontend files and API from the same EC2 instance; S3 stores the deployment bundle and does not host the live frontend. The ALB is provisioned but has no listener or target group yet. Never put database credentials in frontend files.
+The email addresses use the reserved `.test` domain. Public registration is disabled. These shared credentials are intentionally public demo credentials; do not reuse them outside this isolated lab. The seed runs on first boot and is idempotent when the instance is replaced while the database remains.
 
-## Terraform and AWS credentials
+The three shared projects are **Office Move**, **Product Launch**, and **Team Retreat**. Each gets Vikunja's standard List, Gantt, Table, and Kanban views. The Kanban boards use To-Do, Doing, and Done buckets, with dated tasks, labels, assignments, and comments.
 
-Terraform uses the AWS provider's default credential chain. Put the temporary AWS Academy credentials in the local AWS CLI credentials file at `%USERPROFILE%\.aws\credentials`; do not put them in this repository.
+## Package and deploy
 
-After starting the lab, update the `default` profile in that file. From the repository root, package the app before planning:
+The package script requires Windows PowerShell, `tar.exe`, Node.js 24 or newer, pnpm 12.16.1, and workstation internet access. It verifies checksums for the official Vikunja v2.8.0 server release and source archive, builds the frontend, and creates separate frontend and backend bundles in `build\`.
+
+Configure the AWS Academy credentials in the AWS CLI profile, then run these commands from the repository root:
 
 ```powershell
 aws sts get-caller-identity
@@ -28,22 +35,42 @@ terraform -chdir=infra plan -out=tfplan
 terraform -chdir=infra apply tfplan
 ```
 
-The packaging step needs `npm` and internet access on the developer workstation. It builds production dependencies, downloads a checksum-verified Linux Node.js runtime, excludes `.env` files, and writes `build\clienta-app.tar.gz`. Terraform provisions a private S3 artifact bucket through a CloudFormation stack and uploads the archive. The bucket policy grants the existing `LabInstanceProfile` role access to download the bundle through the S3 gateway endpoint. This worked with the current Learner Lab permissions, but CloudFormation does not bypass IAM restrictions and the template does not configure Object Lock. No NAT gateway or custom IAM role is created for artifact access.
+Terraform prompts for the RDS master password. Choose at least 16 characters and keep the value out of the repository. The password is marked sensitive, but Terraform state and plan files still contain sensitive infrastructure data; keep them private and never commit or share them.
 
-Terraform also creates a private MySQL RDS instance. The ALB is not yet connected to the app because its listener and target group have not been implemented. Automated EBS snapshots and CloudWatch alarms are not configured in the current branch.
-
-Destroy the lab resources before the session ends:
+After deployment, open `http://<alb_dns_name>` using the value from:
 
 ```powershell
-terraform plan -destroy -out=destroy.tfplan
-terraform apply destroy.tfplan
+terraform -chdir=infra output -raw alb_dns_name
 ```
 
-The fixed project values are defined directly in the Terraform configuration: the `clienta` prefix, `us-east-1` region, network ranges, and Free Tier instance size. Terraform state, plans, credentials, and provider downloads remain local and are excluded from Git.
+## Current deployment
 
-## Repository structure
+- Public HTTP Application Load Balancer in two public subnets.
+- Separate frontend and backend EC2 Auto Scaling groups, each spanning two Availability Zones, with a minimum and desired capacity of two and a maximum of four.
+- The frontend ASG runs Nginx in public subnets; instances accept HTTP only from the ALB. The backend ASG runs Vikunja's API in private application subnets.
+- The ALB serves the frontend by default and routes `/api/*`, `/dav*`, and `/.well-known/caldav*` to the backend target group.
+- CPU target-tracking policies scale each ASG toward 60% average utilization. Launch-template changes use rolling instance refreshes.
+- Private MySQL 8.0 RDS in the data subnets.
+- A private, encrypted S3 bucket stores separate frontend/backend bundles and the runtime configuration. The existing `LabInstanceProfile` can download only those objects through the S3 gateway endpoint; no custom IAM role or NAT gateway is created.
+- The database password and a derived JWT secret are stored in the private S3 runtime configuration, not in the repository or EC2 user data. The EC2 instance downloads that configuration at boot.
+- The backend ALB health check uses Vikunja's unauthenticated `/api/v1/info` endpoint; the frontend health check uses `/health`.
 
-- `app/` - application source code and database schema.
-- `infra/` - Terraform configuration and AWS modules.
-- `scripts/` - validation and destruction helpers.
-- `docs/` - project documentation and templates.
+Vikunja stores accounts and project/task data in RDS. Uploaded attachments still use local storage on backend instances, so they are not shared across the backend ASG and may be unavailable when requests reach a different instance.
+
+## Data and destroy warning
+
+The bootstrap seed repopulates the four demo accounts and three sample projects when it encounters a fresh database. It does not back up or restore changes made during a session. The current RDS module skips a final snapshot, so a full Terraform destroy removes the database and its data. Take and verify a separate RDS snapshot before destroying the lab if you need to preserve user changes.
+
+```powershell
+terraform -chdir=infra plan -destroy -out=destroy.tfplan
+terraform -chdir=infra apply destroy.tfplan
+```
+
+## Repository notes
+
+- `vikunja\` - demo seed script and database-backed sample data.
+- `infra\` - Terraform configuration and AWS modules.
+- `scripts\` - release packaging and deployment helpers.
+- `app\` - the former Clienta source; it is not included in or deployed by this Vikunja package.
+
+Terraform uses fixed project names, `us-east-1`, the existing `LabInstanceProfile`, and the repository's configured network ranges. No AWS credentials, Terraform state, plan files, or downloaded release binaries belong in Git.

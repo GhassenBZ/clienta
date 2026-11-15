@@ -1,16 +1,16 @@
 resource "aws_db_subnet_group" "main" {
-  name        = "clienta-rds-subnet-group"
-  description = "Database subnet group for Clienta private data subnets"
+  name        = "vikunja-rds-subnet-group"
+  description = "Database subnet group for Vikunja private data subnets"
   subnet_ids  = var.subnet_ids
 
   tags = {
-    Name    = "clienta-rds-subnet-group"
-    Project = "clienta"
+    Name    = "vikunja-rds-subnet-group"
+    Project = "vikunja"
   }
 }
 
 resource "aws_db_instance" "main" {
-  identifier                 = "clienta-db"
+  identifier                 = "vikunja-db"
   engine                     = "mysql"
   engine_version             = "8.0"
   instance_class             = var.instance_class
@@ -28,7 +28,7 @@ resource "aws_db_instance" "main" {
   deletion_protection        = false
 
   tags = {
-    Name    = "clienta-db"
-    Project = "clienta"
+    Name    = "vikunja-db"
+    Project = "vikunja"
   }
 }

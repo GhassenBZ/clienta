@@ -14,6 +14,6 @@ Record one entry for every lab session in which Terraform is applied.
 4. Test the resources needed for the session.
 5. Run the destroy plan before the lab expires.
 6. Apply the destroy plan.
-7. Confirm that no unexpected `clienta-*` resources remain in the AWS console.
+7. Confirm that no unexpected `vikunja-*` resources remain in the AWS console.
 
 Never delete Terraform state before destroying the resources it tracks. Never commit state files, plans, credentials, or `.terraform/` to Git.

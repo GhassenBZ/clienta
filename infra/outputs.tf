@@ -18,13 +18,18 @@ output "private_app_subnet_ids" {
   value       = module.network.private_app_subnet_ids
 }
 
-output "instance_ids" {
-  description = "EC2 instance IDs created for the application layer."
-  value       = module.compute.instance_ids
+output "frontend_asg_name" {
+  description = "Name of the static frontend Auto Scaling group."
+  value       = module.compute.frontend_asg_name
+}
+
+output "backend_asg_name" {
+  description = "Name of the Vikunja API Auto Scaling group."
+  value       = module.compute.backend_asg_name
 }
 
 output "artifact_bucket_name" {
-  description = "Private S3 bucket containing the packaged application."
+  description = "Private S3 bucket containing separate frontend, backend, and runtime bundles."
   value       = aws_cloudformation_stack.artifacts.outputs["BucketName"]
 }
 
@@ -34,7 +39,7 @@ output "s3_gateway_endpoint_id" {
 }
 
 output "rds_security_group_id" {
-  description = "Security group ID reserved for the future RDS instance."
+  description = "Security group ID protecting the private RDS instance."
   value       = module.security.rds_security_group_id
 }
 

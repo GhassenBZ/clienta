@@ -1,0 +1,494 @@
+{
+  "accounts": [
+    {
+      "username": "lisa.chen",
+      "email": "lisa.chen@example.test",
+      "name": "Lisa Chen"
+    },
+    {
+      "username": "marco.rossi",
+      "email": "marco.rossi@example.test",
+      "name": "Marco Rossi"
+    },
+    {
+      "username": "amina.khan",
+      "email": "amina.khan@example.test",
+      "name": "Amina Khan"
+    },
+    {
+      "username": "noah.martin",
+      "email": "noah.martin@example.test",
+      "name": "Noah Martin"
+    }
+  ],
+  "labels": [
+    {
+      "title": "Facilities",
+      "hex_color": "#14B8A6",
+      "description": "Building, furniture, and site coordination"
+    },
+    {
+      "title": "IT",
+      "hex_color": "#3B82F6",
+      "description": "Hardware, network, and software work"
+    },
+    {
+      "title": "Communications",
+      "hex_color": "#F59E0B",
+      "description": "Updates and information for people involved"
+    },
+    {
+      "title": "Ready for review",
+      "hex_color": "#8B5CF6",
+      "description": "Needs a final review before completion"
+    },
+    {
+      "title": "High priority",
+      "hex_color": "#EF4444",
+      "description": "Time-sensitive or blocking work"
+    },
+    {
+      "title": "Operations",
+      "hex_color": "#6366F1",
+      "description": "Planning and day-to-day coordination"
+    }
+  ],
+  "projects": [
+    {
+      "title": "Office Move",
+      "identifier": "MOVE",
+      "hex_color": "#0EA5E9",
+      "description": "A shared plan for moving the team into a new office, from facilities and IT work through move-day readiness.",
+      "members": ["marco.rossi", "amina.khan", "noah.martin"],
+      "tasks": [
+        {
+          "title": "Choose the move weekend",
+          "status": "Done",
+          "start_days": -30,
+          "duration_days": 1,
+          "priority": 3,
+          "assignees": ["lisa.chen"],
+          "labels": ["Operations"],
+          "comments": ["The building team confirmed the weekend window."]
+        },
+        {
+          "title": "Measure every room in the new office",
+          "status": "Done",
+          "start_days": -27,
+          "duration_days": 2,
+          "priority": 2,
+          "assignees": ["marco.rossi"],
+          "labels": ["Facilities", "Ready for review"]
+        },
+        {
+          "title": "Approve the first floor plan",
+          "status": "Done",
+          "start_days": -23,
+          "duration_days": 1,
+          "priority": 3,
+          "assignees": ["amina.khan"],
+          "labels": ["Facilities"]
+        },
+        {
+          "title": "Confirm internet installation",
+          "status": "Done",
+          "start_days": -20,
+          "duration_days": 2,
+          "priority": 3,
+          "assignees": ["noah.martin"],
+          "labels": ["IT"],
+          "comments": ["The provider reserved the installation slot."]
+        },
+        {
+          "title": "Audit existing workstations",
+          "status": "Doing",
+          "start_days": -5,
+          "duration_days": 4,
+          "priority": 2,
+          "assignees": ["noah.martin", "marco.rossi"],
+          "labels": ["IT", "Operations"],
+          "percent_done": 0.6
+        },
+        {
+          "title": "Draft the employee move guide",
+          "status": "Doing",
+          "start_days": -3,
+          "duration_days": 4,
+          "priority": 1,
+          "assignees": ["amina.khan"],
+          "labels": ["Communications"],
+          "percent_done": 0.45
+        },
+        {
+          "title": "Pack shared kitchen supplies",
+          "status": "Doing",
+          "start_days": -2,
+          "duration_days": 3,
+          "priority": 1,
+          "assignees": ["marco.rossi"],
+          "labels": ["Facilities"]
+        },
+        {
+          "title": "Configure the meeting rooms",
+          "status": "Doing",
+          "start_days": -1,
+          "duration_days": 4,
+          "priority": 2,
+          "assignees": ["noah.martin"],
+          "labels": ["IT", "High priority"],
+          "percent_done": 0.25
+        },
+        {
+          "title": "Confirm loading-dock access",
+          "status": "Doing",
+          "start_days": 0,
+          "duration_days": 1,
+          "priority": 2,
+          "assignees": ["marco.rossi"],
+          "labels": ["Facilities", "High priority"]
+        },
+        {
+          "title": "Collect moving-company quotes",
+          "status": "To-Do",
+          "start_days": 2,
+          "duration_days": 3,
+          "priority": 3,
+          "assignees": ["lisa.chen"],
+          "labels": ["Operations", "High priority"]
+        },
+        {
+          "title": "Notify the building manager",
+          "status": "To-Do",
+          "start_days": 2,
+          "duration_days": 1,
+          "priority": 2,
+          "assignees": ["amina.khan"],
+          "labels": ["Communications"]
+        },
+        {
+          "title": "Confirm the badge access list",
+          "status": "To-Do",
+          "start_days": 3,
+          "duration_days": 2,
+          "priority": 2,
+          "assignees": ["marco.rossi"],
+          "labels": ["Facilities"]
+        },
+        {
+          "title": "Publish the packing checklist",
+          "status": "To-Do",
+          "start_days": 4,
+          "duration_days": 2,
+          "priority": 1,
+          "assignees": ["amina.khan"],
+          "labels": ["Communications", "Ready for review"]
+        },
+        {
+          "title": "Order adjustable desks",
+          "status": "To-Do",
+          "start_days": 4,
+          "duration_days": 3,
+          "priority": 2,
+          "assignees": ["marco.rossi"],
+          "labels": ["Facilities"]
+        },
+        {
+          "title": "Label boxes by department",
+          "status": "To-Do",
+          "start_days": 6,
+          "duration_days": 2,
+          "priority": 1,
+          "assignees": ["marco.rossi", "amina.khan"],
+          "labels": ["Facilities"]
+        },
+        {
+          "title": "Update the company address online",
+          "status": "To-Do",
+          "start_days": 7,
+          "duration_days": 2,
+          "priority": 1,
+          "assignees": ["amina.khan"],
+          "labels": ["Communications"]
+        },
+        {
+          "title": "Schedule workstation setup",
+          "status": "To-Do",
+          "start_days": 7,
+          "duration_days": 1,
+          "priority": 2,
+          "assignees": ["noah.martin"],
+          "labels": ["IT"]
+        },
+        {
+          "title": "Archive old paper files",
+          "status": "To-Do",
+          "start_days": 10,
+          "duration_days": 2,
+          "priority": 1,
+          "assignees": ["lisa.chen"],
+          "labels": ["Operations"]
+        }
+      ]
+    },
+    {
+      "title": "Product Launch",
+      "identifier": "LAUNCH",
+      "hex_color": "#8B5CF6",
+      "description": "A cross-functional launch plan covering product readiness, customer communications, support, and release-day coordination.",
+      "members": ["marco.rossi", "amina.khan", "noah.martin"],
+      "tasks": [
+        {
+          "title": "Agree on launch goals",
+          "status": "Done",
+          "start_days": -24,
+          "duration_days": 2,
+          "priority": 3,
+          "assignees": ["lisa.chen"],
+          "labels": ["Operations"]
+        },
+        {
+          "title": "Review the release scope",
+          "status": "Done",
+          "start_days": -21,
+          "duration_days": 2,
+          "priority": 2,
+          "assignees": ["noah.martin"],
+          "labels": ["Ready for review", "Operations"]
+        },
+        {
+          "title": "Prepare the support playbook",
+          "status": "Done",
+          "start_days": -18,
+          "duration_days": 3,
+          "priority": 2,
+          "assignees": ["amina.khan"],
+          "labels": ["Communications"]
+        },
+        {
+          "title": "Validate the release candidate",
+          "status": "Doing",
+          "start_days": -4,
+          "duration_days": 4,
+          "priority": 3,
+          "assignees": ["noah.martin", "marco.rossi"],
+          "labels": ["IT", "High priority"],
+          "percent_done": 0.7,
+          "comments": ["Regression testing is underway; the mobile flow is the last open area."]
+        },
+        {
+          "title": "Finalize customer announcement",
+          "status": "Doing",
+          "start_days": -2,
+          "duration_days": 3,
+          "priority": 2,
+          "assignees": ["amina.khan"],
+          "labels": ["Communications", "Ready for review"],
+          "percent_done": 0.5
+        },
+        {
+          "title": "Check production monitoring",
+          "status": "Doing",
+          "start_days": -1,
+          "duration_days": 2,
+          "priority": 3,
+          "assignees": ["noah.martin"],
+          "labels": ["IT", "High priority"],
+          "percent_done": 0.35
+        },
+        {
+          "title": "Confirm launch-day support rota",
+          "status": "To-Do",
+          "start_days": 1,
+          "duration_days": 2,
+          "priority": 2,
+          "assignees": ["amina.khan"],
+          "labels": ["Operations"]
+        },
+        {
+          "title": "Prepare release notes",
+          "status": "To-Do",
+          "start_days": 2,
+          "duration_days": 2,
+          "priority": 1,
+          "assignees": ["marco.rossi"],
+          "labels": ["Communications"]
+        },
+        {
+          "title": "Schedule the customer email",
+          "status": "To-Do",
+          "start_days": 3,
+          "duration_days": 1,
+          "priority": 1,
+          "assignees": ["amina.khan"],
+          "labels": ["Communications"]
+        },
+        {
+          "title": "Run the launch readiness review",
+          "status": "To-Do",
+          "start_days": 4,
+          "duration_days": 1,
+          "priority": 3,
+          "assignees": ["lisa.chen", "noah.martin"],
+          "labels": ["High priority", "Ready for review"]
+        },
+        {
+          "title": "Publish the help-center update",
+          "status": "To-Do",
+          "start_days": 4,
+          "duration_days": 2,
+          "priority": 1,
+          "assignees": ["amina.khan"],
+          "labels": ["Communications"]
+        },
+        {
+          "title": "Verify the rollback checklist",
+          "status": "To-Do",
+          "start_days": 5,
+          "duration_days": 1,
+          "priority": 3,
+          "assignees": ["noah.martin"],
+          "labels": ["IT", "High priority"]
+        },
+        {
+          "title": "Capture first-week feedback",
+          "status": "To-Do",
+          "start_days": 8,
+          "duration_days": 3,
+          "priority": 1,
+          "assignees": ["lisa.chen", "amina.khan"],
+          "labels": ["Operations"]
+        },
+        {
+          "title": "Share the launch retrospective",
+          "status": "To-Do",
+          "start_days": 12,
+          "duration_days": 2,
+          "priority": 1,
+          "assignees": ["lisa.chen"],
+          "labels": ["Communications"]
+        }
+      ]
+    },
+    {
+      "title": "Team Retreat",
+      "identifier": "RETREAT",
+      "hex_color": "#F97316",
+      "description": "Planning board for an inclusive team retreat, with venue, travel, agenda, accessibility, and follow-up tasks.",
+      "members": ["marco.rossi", "amina.khan", "noah.martin"],
+      "tasks": [
+        {
+          "title": "Choose the retreat dates",
+          "status": "Done",
+          "start_days": -22,
+          "duration_days": 2,
+          "priority": 3,
+          "assignees": ["lisa.chen"],
+          "labels": ["Operations"]
+        },
+        {
+          "title": "Collect dietary and access needs",
+          "status": "Done",
+          "start_days": -19,
+          "duration_days": 3,
+          "priority": 2,
+          "assignees": ["amina.khan"],
+          "labels": ["Operations"],
+          "comments": ["Responses are recorded privately; this board only tracks completion."]
+        },
+        {
+          "title": "Shortlist accessible venues",
+          "status": "Done",
+          "start_days": -16,
+          "duration_days": 3,
+          "priority": 2,
+          "assignees": ["marco.rossi"],
+          "labels": ["Facilities", "Ready for review"]
+        },
+        {
+          "title": "Compare travel options",
+          "status": "Doing",
+          "start_days": -4,
+          "duration_days": 3,
+          "priority": 2,
+          "assignees": ["marco.rossi"],
+          "labels": ["Operations"],
+          "percent_done": 0.55
+        },
+        {
+          "title": "Draft the two-day agenda",
+          "status": "Doing",
+          "start_days": -3,
+          "duration_days": 4,
+          "priority": 2,
+          "assignees": ["amina.khan", "lisa.chen"],
+          "labels": ["Operations"],
+          "percent_done": 0.4
+        },
+        {
+          "title": "Confirm meeting-room equipment",
+          "status": "Doing",
+          "start_days": -1,
+          "duration_days": 2,
+          "priority": 1,
+          "assignees": ["noah.martin"],
+          "labels": ["IT", "Facilities"]
+        },
+        {
+          "title": "Reserve the workshop space",
+          "status": "To-Do",
+          "start_days": 1,
+          "duration_days": 2,
+          "priority": 2,
+          "assignees": ["marco.rossi"],
+          "labels": ["Facilities", "High priority"]
+        },
+        {
+          "title": "Book group transportation",
+          "status": "To-Do",
+          "start_days": 2,
+          "duration_days": 2,
+          "priority": 1,
+          "assignees": ["marco.rossi"],
+          "labels": ["Operations"]
+        },
+        {
+          "title": "Prepare the workshop materials",
+          "status": "To-Do",
+          "start_days": 3,
+          "duration_days": 3,
+          "priority": 1,
+          "assignees": ["amina.khan"],
+          "labels": ["Operations"]
+        },
+        {
+          "title": "Publish the participant schedule",
+          "status": "To-Do",
+          "start_days": 4,
+          "duration_days": 1,
+          "priority": 2,
+          "assignees": ["amina.khan"],
+          "labels": ["Communications", "Ready for review"]
+        },
+        {
+          "title": "Set up an anonymous feedback form",
+          "status": "To-Do",
+          "start_days": 5,
+          "duration_days": 2,
+          "priority": 1,
+          "assignees": ["noah.martin"],
+          "labels": ["IT"]
+        },
+        {
+          "title": "Share notes and action items",
+          "status": "To-Do",
+          "start_days": 9,
+          "duration_days": 2,
+          "priority": 1,
+          "assignees": ["lisa.chen"],
+          "labels": ["Communications"],
+          "comments": ["The recap should include owners and due dates for follow-up work."]
+        }
+      ]
+    }
+  ]
+}

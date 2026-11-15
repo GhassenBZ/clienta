@@ -1,6 +1,11 @@
-output "app_security_group_id" {
-  description = "Security group ID for EC2 application instances."
-  value       = aws_security_group.app.id
+output "frontend_security_group_id" {
+  description = "Security group ID for frontend Auto Scaling instances."
+  value       = aws_security_group.frontend.id
+}
+
+output "backend_security_group_id" {
+  description = "Security group ID for Vikunja API Auto Scaling instances."
+  value       = aws_security_group.backend.id
 }
 
 output "rds_security_group_id" {

@@ -1,24 +1,10 @@
-# Clienta AWS architecture
+# Vikunja AWS architecture
 
-## L1 scope
+## Application
 
-Clienta is a customer-management application with:
+This branch packages the official Vikunja v2.8.0 browser frontend and API as separate deployment bundles. Nginx serves the static frontend from a multi-AZ frontend Auto Scaling group; the Vikunja API runs in a separate multi-AZ backend Auto Scaling group. Account, project, and task records persist in MySQL on RDS. The backend first-boot seeder creates four real demo accounts, three shared projects, and 44 dated tasks with Kanban buckets, labels, assignments, and comments.
 
-- a browser frontend;
-- an Express REST API;
-- a MySQL persistence layer.
-
-The target is a reproducible three-tier AWS deployment using services allowed by the project brief and suitable for an AWS Academy lab account.
-
-## L2 target architecture
-
-See the [full target-state diagram](./clienta-architecture-target.drawio).
-
-The target design separates the tiers:
-
-1. **Presentation tier:** public HTTP entry point through an Application Load Balancer.
-2. **Application tier:** EC2 instances in private application subnets.
-3. **Data tier:** MySQL on RDS in private data subnets.
+## Network and data path
 
 The VPC uses `10.0.0.0/16` in `us-east-1` with two Availability Zones:
 
@@ -26,37 +12,43 @@ The VPC uses `10.0.0.0/16` in `us-east-1` with two Availability Zones:
 - private application subnets: `10.0.11.0/24`, `10.0.12.0/24`;
 - private data subnets: `10.0.21.0/24`, `10.0.22.0/24`.
 
-Security groups are tier-oriented. Internet traffic reaches the ALB on HTTP, and the application security group accepts application traffic from the ALB security group. SSH is restricted to the VPC CIDR in this lab baseline and should be narrowed further before any non-lab use.
+The public Application Load Balancer accepts HTTP on port 80. It forwards ordinary browser paths to the frontend target group on port 80, and routes `/api/*`, `/dav*`, and `/.well-known/caldav*` to the private backend target group on port 8080. The frontend build leaves `window.API_URL` empty so browser API calls remain same-origin and are routed by the ALB. Frontend and backend health checks use `/health` and `/api/v1/info`, respectively. The RDS security group allows MySQL only from the backend security group. The S3 gateway endpoint lets the instances download their respective bundles and private runtime configuration without a NAT gateway.
 
 ## Current implementation
 
-The current Terraform configuration creates:
+Terraform creates:
 
-- the VPC and DNS support;
-- two public, two private application, and two private data subnets;
-- an internet gateway and public route table;
-- an internet-facing ALB and its security group, but no ALB listener or target group yet;
-- an application security group and an RDS security group attached to a private MySQL RDS instance, allowing MySQL only from the application security group;
-- a private S3 bucket provisioned by a Terraform-managed CloudFormation stack, containing the packaged app, production dependencies, and Linux Node.js runtime;
-- an S3 gateway endpoint on the private application route table, allowing the app instance to fetch the bundle without NAT;
-- one EC2 application instance in the first private application subnet, with an encrypted gp3 root EBS volume and the AWS Academy instance profile. The Express process serves both the frontend files and API from this instance.
+- the VPC, six subnets, internet gateway, and route tables;
+- an internet-facing ALB, listener, frontend/backend target groups, API path rule, health checks, and tier security groups;
+- separate frontend and backend launch templates and Auto Scaling groups, each with a desired/minimum capacity of two and maximum capacity of four across both AZs;
+- CPU target-tracking policies for both groups and rolling instance refreshes when launch templates change;
+- encrypted gp3 root volumes and the AWS Academy `LabInstanceProfile` for all instances;
+- a private MySQL 8.0 RDS instance;
+- an encrypted, private S3 bucket provisioned by a Terraform-managed CloudFormation stack.
 
-Run `scripts/package-app.ps1` before Terraform planning. It installs production dependencies locally, adds a checksum-verified Linux Node.js runtime, and creates the deployment archive while excluding `.env` files. Terraform uploads the archive; the bucket policy grants the existing `LabInstanceProfile` role `GetObject` access to that artifact, and the private S3 gateway endpoint has no hourly charge. In the current Learner Lab, provisioning the bucket through the CloudFormation stack succeeded. CloudFormation does not bypass IAM restrictions; the operations still depend on the caller's effective permissions. The template does not enable S3 Object Lock. The instance requires no NAT route or internet access for bootstrapping. Destroy removes the EC2 instance, endpoint, bucket, and artifact.
+The S3 bucket contains separately packaged frontend and backend bundles plus a JSON runtime configuration. The bucket policy and S3 endpoint restrict EC2 `GetObject` access to those three objects. The runtime configuration contains the RDS password and a stable Vikunja signing secret; backend instances download it at boot, so neither value is embedded in the repository or user data. Terraform state and the S3 object remain sensitive and must be kept private.
 
-S3 is currently used for deployment artifacts, not for serving the browser frontend. The frontend and backend are not deployed to separate instances. The ALB cannot serve application traffic until its listener and target group are added. Automated EBS snapshots through Data Lifecycle Manager are not configured in this branch; the encrypted root volume alone does not create snapshots. CloudWatch log groups and alarms are also not configured yet.
+The frontend instances install Nginx and serve the frontend bundle with SPA fallback. Backend instances run the Vikunja server and a systemd oneshot seeder that uses the CLI and API to create demo accounts with public, disposable credentials and shared projects. Public registration is disabled. The seeder checks existing records to avoid duplicating data when instances are replaced but RDS remains.
+
+## Limits and remaining work
+
+- The frontend and backend groups each run at least two instances across the configured AZs. These settings are implemented in Terraform but have not been applied or demonstrated in AWS.
+- Vikunja task attachments use local backend-instance storage; they are not shared across the backend ASG and do not survive instance replacement.
+- The RDS module does not configure automated backup retention and skips a final snapshot. A full Terraform destroy removes the database; a fresh database is repopulated only with the sample seed.
+- Terraform state is local rather than shared and session-surviving.
+- CloudWatch log groups, dashboard, and operational alarms are not configured; target-tracking policies create AWS-managed scaling alarms. SSH is still allowed from the full VPC CIDR and should be narrowed.
+- The previous `clienta-architecture-*.drawio` files are historical Clienta diagrams and do not describe the current Vikunja deployment.
 
 ## Progress against the cahier des charges
 
-The brief defines seven sequential deliverables; L3 is an intermediate milestone, not the finished project. The table below assesses repository evidence only. Live demonstrations, AWS resources, and approvals must be verified separately.
+The brief defines seven sequential deliverables; L3 is an intermediate milestone, not the finished project. Repository evidence does not establish that a live AWS deployment, classroom demonstration, or approval has passed.
 
 | Deliverable | Required outcome | Current evidence and status |
 |---|---|---|
-| L1 — Subject and requirements | Approved application choice, stakeholders, measurable objectives, high-level diagram | The Clienta app exists in the repository. An L1 approval record and agreed measurable objectives are not documented here; status not verified. |
-| L2 — Architecture and budget | Detailed target architecture, service decisions, AWS Calculator estimate, configured budget alarm | Architecture and cost notes exist, but a calculator-based estimate and configured budget alarm are not evidenced; incomplete. |
-| L3 — Network and compute | Multi-AZ VPC/subnets, routing, security groups, first EC2, egress decision, IaC modules, state plan, destroy script | VPC, subnets, route tables, security groups, one private EC2 instance, S3 gateway endpoint, modular Terraform, and a destroy script are present. The no-NAT egress choice is documented. Terraform state is local, so the brief's shared, session-surviving state requirement is not met. Mostly implemented. |
-| L4 — High availability | ALB health checks, multi-AZ Auto Scaling group with at least two instances, end-to-end availability, replacement demonstration | The ALB resource exists, but there is no listener, target group, health check, Launch Template, or Auto Scaling group. No replacement demonstration is evidenced. Not complete. |
-| L5 — Data and backup | Private RDS, app-only database access, automated backups and demonstrated restore, real S3 use, full rebuild demonstration | Private RDS and app-SG-only database ingress are configured. S3 is used for deployment artifacts, satisfying a real S3 use in the design. Backup retention is not explicitly configured in Terraform, and restore/full-rebuild demonstrations are not evidenced. Partially implemented. |
-| L6 — Monitoring, security, and cost | Centralized CloudWatch logs, dashboard, two working alarms, hardened security, secret management, measured cost and quantified optimization | CloudWatch resources are absent. SSH currently allows the whole VPC CIDR. A database password has a committed Terraform default and is rendered into EC2 user data; this does not meet the brief's secret-handling requirement. No measured cost report or quantified optimization is evidenced. Not complete; address the secret handling before deployment or presentation. |
+| L1 — Subject and requirements | Approved application choice, stakeholders, measurable objectives, high-level diagram | Vikunja is now the selected workload and is implemented for hosting. An L1 approval record and agreed measurable objectives are not documented here; status not verified. |
+| L2 — Architecture and budget | Detailed target architecture, service decisions, AWS Calculator estimate, configured budget alarm | The deployment topology and cost drivers are documented, but a calculator-based estimate and configured budget alarm are not evidenced; incomplete. |
+| L3 — Network and compute | Multi-AZ VPC/subnets, routing, security groups, first EC2, egress decision, IaC modules, state plan, destroy script | VPC, subnets, route tables, security groups, separate frontend/backend launch templates and ASGs, S3 gateway endpoint, modular Terraform, and a destroy script are present. The no-NAT egress choice is documented. Terraform state remains local; mostly implemented. |
+| L4 — High availability | ALB health checks, multi-AZ Auto Scaling group with at least two instances, end-to-end availability, replacement demonstration | Separate frontend/backend ASGs have minimum/desired capacity two, target-tracking scaling policies, and rolling instance refresh configuration. No AWS apply, load/failure test, or replacement demonstration has been completed; implementation configured, operational evidence outstanding. |
+| L5 — Data and backup | Private RDS, app-only database access, automated backups and demonstrated restore, real S3 use, full rebuild demonstration | Private RDS and app-SG-only database ingress are configured. S3 stores deployment artifacts and private runtime configuration. Backup retention and restore/full-rebuild demonstrations are not evidenced; partially implemented. |
+| L6 — Monitoring, security, and cost | Centralized CloudWatch logs, dashboard, two working alarms, hardened security, secret management, measured cost and quantified optimization | Database credentials are no longer in source or EC2 user data, but the private runtime object and Terraform state contain sensitive values. Explicit monitoring resources, measured cost, and quantified optimization are absent; only AWS-managed scaling alarms are created. SSH scope remains broad. Not complete. |
 | L7 — Operations and defense | Load/failure testing, incident report, finalized runbook, live destroy/rebuild and presentation | A destroy script exists, but load/failure tests, an incident report, an operations runbook, and live destroy/rebuild evidence are not documented. Not complete. |
-
-These are implementation-status findings, not claims that a live AWS deployment or classroom demonstration has passed.

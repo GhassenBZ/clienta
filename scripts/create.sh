@@ -14,6 +14,13 @@ trap pause_on_exit EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+FRONTEND_BUNDLE_PATH="$ROOT_DIR/build/vikunja-frontend.tar.gz"
+BACKEND_BUNDLE_PATH="$ROOT_DIR/build/vikunja-backend.tar.gz"
+
+if [[ ! -f "$FRONTEND_BUNDLE_PATH" || ! -f "$BACKEND_BUNDLE_PATH" ]]; then
+  echo "Vikunja bundles are missing. Run .\\scripts\\package-app.ps1 before deployment." >&2
+  exit 1
+fi
 
 # ── 1. Validate Terraform ─────────────────────────────────────────────────────
 echo "==> Validating Terraform configuration..."

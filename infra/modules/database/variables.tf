@@ -11,7 +11,7 @@ variable "security_group_id" {
 variable "db_name" {
   description = "Name of the default database to create."
   type        = string
-  default     = "clienta"
+  default     = "vikunja"
 }
 
 variable "db_username" {

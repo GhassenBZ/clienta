@@ -8,8 +8,8 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = true
 
   tags = {
-    Name    = "clienta-vpc"
-    Project = "clienta"
+    Name    = "vikunja-vpc"
+    Project = "vikunja"
   }
 }
 
@@ -17,8 +17,8 @@ resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name    = "clienta-igw"
-    Project = "clienta"
+    Name    = "vikunja-igw"
+    Project = "vikunja"
   }
 }
 
@@ -31,8 +31,8 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name    = "clienta-public-${count.index + 1}"
-    Project = "clienta"
+    Name    = "vikunja-public-${count.index + 1}"
+    Project = "vikunja"
     Tier    = "public"
   }
 }
@@ -46,8 +46,8 @@ resource "aws_subnet" "private_app" {
   map_public_ip_on_launch = false
 
   tags = {
-    Name    = "clienta-app-${count.index + 1}"
-    Project = "clienta"
+    Name    = "vikunja-app-${count.index + 1}"
+    Project = "vikunja"
     Tier    = "private-app"
   }
 }
@@ -61,8 +61,8 @@ resource "aws_subnet" "private_data" {
   map_public_ip_on_launch = false
 
   tags = {
-    Name    = "clienta-data-${count.index + 1}"
-    Project = "clienta"
+    Name    = "vikunja-data-${count.index + 1}"
+    Project = "vikunja"
     Tier    = "private-data"
   }
 }
@@ -76,8 +76,8 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name    = "clienta-public-rt"
-    Project = "clienta"
+    Name    = "vikunja-public-rt"
+    Project = "vikunja"
   }
 }
 
@@ -92,8 +92,8 @@ resource "aws_route_table" "private_app" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name    = "clienta-private-app-rt"
-    Project = "clienta"
+    Name    = "vikunja-private-app-rt"
+    Project = "vikunja"
   }
 }
 
@@ -108,25 +108,29 @@ resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.us-east-1.s3"
   vpc_endpoint_type = "Gateway"
-  route_table_ids   = [aws_route_table.private_app.id]
+  route_table_ids   = [aws_route_table.public.id, aws_route_table.private_app.id]
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
       Principal = "*"
       Action    = "s3:GetObject"
-      Resource  = "${var.artifact_bucket_arn}/clienta-app.tar.gz"
+      Resource = [
+        "${var.artifact_bucket_arn}/vikunja-frontend.tar.gz",
+        "${var.artifact_bucket_arn}/vikunja-backend.tar.gz",
+        "${var.artifact_bucket_arn}/vikunja-runtime.json",
+      ]
     }]
   })
 
   tags = {
-    Name    = "clienta-s3-gateway-endpoint"
-    Project = "clienta"
+    Name    = "vikunja-s3-gateway-endpoint"
+    Project = "vikunja"
   }
 }
 
 resource "aws_security_group" "alb" {
-  name        = "clienta-alb-sg"
+  name        = "vikunja-alb-sg"
   description = "Public ALB security group"
   vpc_id      = aws_vpc.main.id
 
@@ -145,27 +149,27 @@ resource "aws_security_group" "alb" {
   }
 
   tags = {
-    Name    = "clienta-alb-sg"
-    Project = "clienta"
+    Name    = "vikunja-alb-sg"
+    Project = "vikunja"
   }
 }
 
 resource "aws_lb" "main" {
-  name               = "clienta-alb"
+  name               = "vikunja-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
   subnets            = aws_subnet.public[*].id
 
   tags = {
-    Name    = "clienta-alb"
-    Project = "clienta"
+    Name    = "vikunja-alb"
+    Project = "vikunja"
   }
 }
 
-resource "aws_lb_target_group" "app" {
-  name        = "clienta-app-tg"
-  port        = 8080
+resource "aws_lb_target_group" "frontend" {
+  name        = "vikunja-frontend-tg"
+  port        = 80
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "instance"
@@ -183,8 +187,33 @@ resource "aws_lb_target_group" "app" {
   }
 
   tags = {
-    Name    = "clienta-app-tg"
-    Project = "clienta"
+    Name    = "vikunja-frontend-tg"
+    Project = "vikunja"
+  }
+}
+
+resource "aws_lb_target_group" "backend" {
+  name        = "vikunja-backend-tg"
+  port        = 8080
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "instance"
+
+  health_check {
+    enabled             = true
+    path                = "/api/v1/info"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+    timeout             = 5
+    interval            = 30
+    matcher             = "200"
+  }
+
+  tags = {
+    Name    = "vikunja-backend-tg"
+    Project = "vikunja"
   }
 }
 
@@ -195,11 +224,27 @@ resource "aws_lb_listener" "http" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
+    target_group_arn = aws_lb_target_group.frontend.arn
   }
 
   tags = {
-    Name    = "clienta-http-listener"
-    Project = "clienta"
+    Name    = "vikunja-http-listener"
+    Project = "vikunja"
+  }
+}
+
+resource "aws_lb_listener_rule" "backend_api" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 100
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/*", "/dav*", "/.well-known/caldav*"]
+    }
   }
 }

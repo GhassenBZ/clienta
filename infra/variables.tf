@@ -1,12 +1,11 @@
 variable "db_username" {
   description = "Master username for the RDS database."
   type        = string
-  default     = "admin"
+  default     = "vikunja_admin"
 }
 
 variable "db_password" {
-  description = "Master password for the RDS database (at least 8 characters)."
+  description = "Master password for RDS; use at least 16 characters and enter it at the Terraform prompt."
   type        = string
   sensitive   = true
-  default     = "Clienta2026Secure!"
 }
