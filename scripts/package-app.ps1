@@ -66,7 +66,7 @@ if ($actualSha256 -ne $nodeSha256) {
 }
 
 New-Item -ItemType Directory -Path $nodeExtractDir -Force | Out-Null
-& tar.exe -xzf $nodeArchive -C $nodeExtractDir "$nodeFolder/bin/node" "$nodeFolder/LICENSE"
+& "$env:SystemRoot\System32\tar.exe" -xzf $nodeArchive -C $nodeExtractDir "$nodeFolder/bin/node" "$nodeFolder/LICENSE"
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to extract the verified Node.js runtime archive."
 }
@@ -82,7 +82,7 @@ foreach ($entry in $stagedEntries) {
     $entry.LastWriteTimeUtc = $normalizedTimestamp
 }
 
-& tar.exe -czf $archivePath -C $stageDir .
+& "$env:SystemRoot\System32\tar.exe" -czf $archivePath -C $stageDir .
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to create the application bundle."
 }
