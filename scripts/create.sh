@@ -15,12 +15,7 @@ trap pause_on_exit EXIT
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# ── 1. Package the app ────────────────────────────────────────────────────────
-echo "==> Packaging application..."
-powershell.exe -ExecutionPolicy Bypass -File "$ROOT_DIR/scripts/package-app.ps1"
-
-# ── 2. Validate Terraform ─────────────────────────────────────────────────────
-echo ""
+# ── 1. Validate Terraform ─────────────────────────────────────────────────────
 echo "==> Validating Terraform configuration..."
 cd "$ROOT_DIR/infra"
 terraform fmt -check -diff
