@@ -37,3 +37,8 @@ output "alb_security_group_id" {
   description = "Security group ID used by the public application load balancer."
   value       = aws_security_group.alb.id
 }
+
+output "app_target_group_arn" {
+  description = "ARN of the ALB target group for the application."
+  value       = aws_lb_target_group.app.arn
+}

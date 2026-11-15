@@ -127,6 +127,7 @@ module "compute" {
   db_name               = module.database.db_name
   db_user               = module.database.username
   db_password           = var.db_password
+  target_group_arn      = module.network.app_target_group_arn
 
   depends_on = [
     module.network,

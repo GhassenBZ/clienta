@@ -2,13 +2,15 @@
 
 Clienta is a three-tier customer management app with a browser frontend, an Express API, and a MySQL database.
 
+Project implementation status against the seven deliverables in the cahier des charges is summarized in [docs/final-project-summary.md](./docs/final-project-summary.md).
+
 ## Run locally
 
 Start the app from `app/backend` with `npm start`. It reads database settings from `app/backend/.env`, creates the customer table when the database is available, and serves both the frontend and API on port 8080. Open `http://localhost:8080` to use the app. Copy the root `.env.example` to `app/backend/.env`, set your local database credentials, and create the configured MySQL database before starting.
 
 ## Deployment
 
-The frontend uses the same-origin `/api/customers` path. Keep the frontend and API on the same origin. Never put database credentials in frontend files.
+The frontend uses the same-origin `/api/customers` path. Currently Express serves the frontend files and API from the same EC2 instance; S3 stores the deployment bundle and does not host the live frontend. The ALB is provisioned but has no listener or target group yet. Never put database credentials in frontend files.
 
 ## Terraform and AWS credentials
 
@@ -26,7 +28,9 @@ terraform -chdir=infra plan -out=tfplan
 terraform -chdir=infra apply tfplan
 ```
 
-The packaging step needs `npm` and internet access on the developer workstation. It builds production dependencies, downloads a checksum-verified Linux Node.js runtime, excludes `.env` files, and writes `build\clienta-app.tar.gz`. Terraform creates a private S3 artifact bucket (via a CloudFormation stack to seamlessly bypass AWS Academy Object Lock permission restrictions) and uploads that archive. The app instance reads it through the S3 gateway endpoint using the existing `LabInstanceProfile`; no NAT gateway or custom IAM role is created for the artifact access.
+The packaging step needs `npm` and internet access on the developer workstation. It builds production dependencies, downloads a checksum-verified Linux Node.js runtime, excludes `.env` files, and writes `build\clienta-app.tar.gz`. Terraform provisions a private S3 artifact bucket through a CloudFormation stack and uploads the archive. The bucket policy grants the existing `LabInstanceProfile` role access to download the bundle through the S3 gateway endpoint. This worked with the current Learner Lab permissions, but CloudFormation does not bypass IAM restrictions and the template does not configure Object Lock. No NAT gateway or custom IAM role is created for artifact access.
+
+Terraform also creates a private MySQL RDS instance. The ALB is not yet connected to the app because its listener and target group have not been implemented. Automated EBS snapshots and CloudWatch alarms are not configured in the current branch.
 
 Destroy the lab resources before the session ends:
 

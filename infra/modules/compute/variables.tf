@@ -52,3 +52,8 @@ variable "db_password" {
   sensitive   = true
   default     = ""
 }
+
+variable "target_group_arn" {
+  description = "ARN of the ALB target group to register the instance with."
+  type        = string
+}
