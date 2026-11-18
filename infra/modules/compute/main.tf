@@ -45,39 +45,15 @@ resource "aws_launch_template" "frontend" {
               exec > /var/log/vikunja-frontend-bootstrap.log 2>&1
               trap 'status=$?; echo "Vikunja frontend bootstrap failed with status $status"; exit "$status"' ERR
 
-              useradd --system --user-group --home-dir /var/lib/vikunja-frontend --create-home --shell /sbin/nologin vikunja-frontend
               mkdir -p /opt/vikunja/frontend /var/www/vikunja
               aws s3 cp "s3://${var.artifact_bucket_name}/${var.frontend_bundle_key}" /tmp/vikunja-frontend.tar.gz --region us-east-1
               echo "${var.frontend_bundle_sha256}  /tmp/vikunja-frontend.tar.gz" | sha256sum --check
               tar -xzf /tmp/vikunja-frontend.tar.gz -C /opt/vikunja/frontend
               cp -a /opt/vikunja/frontend/www/. /var/www/vikunja/
-              install -m 0644 /opt/vikunja/frontend/serve_frontend.py /opt/vikunja/serve_frontend.py
-              cat > /etc/systemd/system/vikunja-frontend.service <<'SERVICE'
-              [Unit]
-              Description=Vikunja static frontend
-              After=network-online.target
-              Wants=network-online.target
-
-              [Service]
-              Type=simple
-              User=vikunja-frontend
-              Group=vikunja-frontend
-              WorkingDirectory=/var/www/vikunja
-              ExecStart=/usr/bin/python3 /opt/vikunja/serve_frontend.py
-              Restart=on-failure
-              RestartSec=5
-              AmbientCapabilities=CAP_NET_BIND_SERVICE
-              CapabilityBoundingSet=CAP_NET_BIND_SERVICE
-              NoNewPrivileges=true
-              ProtectSystem=strict
-              ProtectHome=true
-              PrivateTmp=true
-
-              [Install]
-              WantedBy=multi-user.target
-              SERVICE
+              dnf install -y --disablerepo='*' /opt/vikunja/frontend/nginx/nginx.rpm
+              install -m 0644 /opt/vikunja/frontend/nginx/nginx.conf /etc/nginx/nginx.conf
               systemctl daemon-reload
-              systemctl enable --now vikunja-frontend.service
+              systemctl enable --now nginx.service
               rm -f /tmp/vikunja-frontend.tar.gz
               EOF
   )

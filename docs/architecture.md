@@ -2,7 +2,7 @@
 
 ## Application
 
-This branch packages the official Vikunja v2.8.0 browser frontend and API as separate deployment bundles. A bundled Python standard-library server serves the static frontend from a multi-AZ frontend Auto Scaling group in private application subnets; the Vikunja API runs in a separate multi-AZ backend Auto Scaling group. Account, project, and task records persist in MySQL on RDS. The backend first-boot seeder creates four real demo accounts, three shared projects, and 44 dated tasks with Kanban buckets, labels, assignments, and comments.
+This branch packages the official Vikunja v2.8.0 browser frontend and API as separate deployment bundles. The frontend bundle contains the static browser assets, a pinned Nginx RPM, and Nginx configuration for a multi-AZ frontend Auto Scaling group in private application subnets; the Vikunja API runs in a separate multi-AZ backend Auto Scaling group. Account, project, and task records persist in MySQL on RDS. The backend first-boot seeder creates four real demo accounts, three shared projects, and 44 dated tasks with Kanban buckets, labels, assignments, and comments.
 
 ## Network and data path
 
@@ -28,7 +28,7 @@ Terraform creates:
 
 The S3 bucket contains separately packaged frontend and backend bundles plus a JSON runtime configuration. The bucket policy and S3 endpoint restrict EC2 `GetObject` access to those three objects. The runtime configuration contains the RDS password and a stable Vikunja signing secret; backend instances download it at boot, so neither value is embedded in the repository or user data. Terraform state and the S3 object remain sensitive and must be kept private.
 
-Frontend instances run the bundled Python static server under systemd with SPA fallback and a `/health` endpoint. Backend instances run the Vikunja server and a systemd oneshot seeder that uses the CLI and API to create demo accounts with public, disposable credentials and shared projects. Public registration is disabled. The seeder checks existing records to avoid duplicating data when instances are replaced but RDS remains.
+Frontend instances install the bundled Nginx RPM, copy the static assets, and run Nginx under systemd with SPA fallback and a `/health` endpoint. Backend instances run the Vikunja server and a systemd oneshot seeder that uses the CLI and API to create demo accounts with public, disposable credentials and shared projects. Public registration is disabled. The seeder checks existing records to avoid duplicating data when instances are replaced but RDS remains.
 
 ## Limits and remaining work
 

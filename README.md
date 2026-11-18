@@ -21,7 +21,7 @@ The three shared projects are **Office Move**, **Product Launch**, and **Team Re
 
 ## Package and deploy
 
-The package script requires Windows PowerShell, `tar.exe`, Node.js 24 or newer, pnpm 12.16.1, and workstation internet access. It verifies checksums for the official Vikunja v2.8.0 server release and source archive, builds the frontend, and creates separate frontend and backend bundles in `build\`.
+The package script requires Windows PowerShell, `tar.exe`, Node.js 24 or newer, pnpm 12.16.1, and workstation internet access. It verifies checksums for the official Vikunja v2.8.0 server release, source archive, and Nginx 1.28.2 RPM, builds the frontend, and creates separate frontend and backend bundles in `build\`.
 
 Configure the AWS Academy credentials in the AWS CLI profile, then run these commands from the repository root:
 
@@ -47,7 +47,7 @@ terraform -chdir=infra output -raw alb_dns_name
 
 - Public HTTP Application Load Balancer in two public subnets.
 - Separate frontend and backend EC2 Auto Scaling groups, each spanning two Availability Zones, with a minimum and desired capacity of two and a maximum of four.
-- The frontend and backend ASGs run in private application subnets. Frontend instances have no public IP and serve static files with the bundled Python standard-library server; their security group accepts HTTP only from the ALB. Backend instances run Vikunja's API.
+- The frontend and backend ASGs run in private application subnets. Frontend instances have no public IP and install the bundled Nginx RPM before serving the static files; their security group accepts HTTP only from the ALB. Backend instances run Vikunja's API.
 - The ALB serves the frontend by default and routes `/api/*`, `/dav*`, and `/.well-known/caldav*` to the backend target group.
 - CPU target-tracking policies scale each ASG toward 60% average utilization. Launch-template changes use rolling instance refreshes.
 - Private MySQL 8.0 RDS in the data subnets.
@@ -71,6 +71,5 @@ terraform -chdir=infra apply destroy.tfplan
 - `vikunja\` - demo seed script and database-backed sample data.
 - `infra\` - Terraform configuration and AWS modules.
 - `scripts\` - release packaging and deployment helpers.
-- `app\` - the former Clienta source; it is not included in or deployed by this Vikunja package.
 
 Terraform uses fixed project names, `us-east-1`, the existing `LabInstanceProfile`, and the repository's configured network ranges. No AWS credentials, Terraform state, plan files, or downloaded release binaries belong in Git.
