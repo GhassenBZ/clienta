@@ -1,9 +1,9 @@
-$ErrorActionPreference = "Stop"
-
 param(
     [Parameter(Mandatory = $true)]
     [string]$BucketName
 )
+
+$ErrorActionPreference = "Stop"
 
 $deleteItems = @()
 $nextKeyMarker = $null

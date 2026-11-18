@@ -152,8 +152,9 @@ resource "terraform_data" "upload_bucket_cleanup" {
   input = aws_cloudformation_stack.artifacts.outputs["UploadBucketName"]
 
   provisioner "local-exec" {
-    when    = destroy
-    command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ${path.root}/../scripts/empty-s3-bucket.ps1 -BucketName ${self.input}"
+    when        = destroy
+    working_dir = "${path.root}/.."
+    command     = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"${path.root}/../scripts/empty-s3-bucket.ps1\" -BucketName \"${self.input}\""
   }
 
   depends_on = [aws_cloudformation_stack.artifacts]
