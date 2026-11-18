@@ -65,6 +65,9 @@ resource "aws_cloudformation_stack" "artifacts" {
               }
             }]
           }
+          VersioningConfiguration = {
+            Status = "Enabled"
+          }
           Tags = [
             { Key = "Name", Value = "vikunja-artifacts" },
             { Key = "Project", Value = "vikunja" },
@@ -87,6 +90,9 @@ resource "aws_cloudformation_stack" "artifacts" {
                 SSEAlgorithm = "AES256"
               }
             }]
+          }
+          VersioningConfiguration = {
+            Status = "Enabled"
           }
           Tags = [
             { Key = "Name", Value = "vikunja-uploads" },
@@ -147,7 +153,7 @@ resource "terraform_data" "upload_bucket_cleanup" {
 
   provisioner "local-exec" {
     when    = destroy
-    command = "aws s3 rm s3://${self.input}/ --recursive --region us-east-1"
+    command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ${path.root}/../scripts/empty-s3-bucket.ps1 -BucketName ${self.input}"
   }
 
   depends_on = [aws_cloudformation_stack.artifacts]

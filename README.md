@@ -59,12 +59,37 @@ Vikunja stores accounts and project/task data in RDS. Task attachments, uploaded
 
 ## Data and destroy warning
 
-The bootstrap seed repopulates the four demo accounts and three sample projects when it encounters a fresh database. It does not back up or restore changes made during a session. The current RDS module skips a final snapshot, so a full Terraform destroy removes the database and its data. Before destroy, the Terraform configuration removes Vikunja upload objects from the private upload bucket so CloudFormation can delete the bucket. Take and verify a separate RDS snapshot and a backup of the upload bucket before destroying the lab if you need to preserve user changes or files.
+The bootstrap seed repopulates the four demo accounts and three sample projects when it encounters a fresh database. RDS now retains seven days of automated backups and creates a final snapshot named `vikunja-final-snapshot` during deletion. S3 bucket versioning preserves uploaded-object history. Before destroy, the Terraform cleanup removes upload objects and versions so CloudFormation can delete the bucket. Use `scripts/backup-data.ps1` for a manual RDS snapshot and a local copy of the upload bucket before destructive operations.
 
 ```powershell
 terraform -chdir=infra plan -destroy -out=destroy.tfplan
 terraform -chdir=infra apply destroy.tfplan
 ```
+
+### Backup and restore
+
+Before destroy, create a manual RDS snapshot and copy the upload bucket:
+
+```powershell
+.\scripts\backup-data.ps1
+```
+
+Verify the snapshot and S3 backup:
+
+```powershell
+aws rds describe-db-snapshots --db-snapshot-identifier vikunja-manual-<timestamp>
+Get-ChildItem backups\<timestamp>\s3-uploads
+```
+
+To restore RDS, create a new database instance from the snapshot in AWS. For example:
+
+```powershell
+aws rds restore-db-instance-from-db-snapshot `
+  --db-instance-identifier vikunja-db-restored `
+  --db-snapshot-identifier vikunja-manual-<timestamp>
+```
+
+Restore the upload files back into the upload bucket and update the Vikunja runtime configuration only after confirming the restored database endpoint.
 
 ## Repository notes
 

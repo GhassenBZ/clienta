@@ -34,7 +34,7 @@ Frontend instances install the bundled Nginx RPM, copy the static assets, and ru
 
 - The frontend and backend groups each run at least two instances across the configured AZs. These settings are implemented in Terraform but have not been applied or demonstrated in AWS.
 - Vikunja task attachments, uploaded avatars, project backgrounds, and generated image content use a dedicated private S3 upload bucket and are shared across the backend ASG.
-- The RDS module does not configure automated backup retention and skips a final snapshot. A full Terraform destroy removes the database; a fresh database is repopulated only with the sample seed.
+- RDS retains seven days of automated backups, creates a final snapshot named `vikunja-final-snapshot` on deletion, and tags snapshots from the database. S3 artifact and upload buckets enable object versioning. A full Terraform destroy removes the database unless it is preserved/restored separately; backup and restore procedures are documented.
 - Terraform state is local rather than shared and session-surviving.
 - CloudWatch log groups, dashboard, and operational alarms are not configured; target-tracking policies create AWS-managed scaling alarms. SSH is still allowed from the full VPC CIDR and should be narrowed.
 - The previous `clienta-architecture-*.drawio` files are historical Clienta diagrams and do not describe the current Vikunja deployment.

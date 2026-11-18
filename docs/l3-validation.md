@@ -40,6 +40,6 @@ terraform -chdir=infra plan -destroy -out=destroy.tfplan
 terraform -chdir=infra apply destroy.tfplan
 ```
 
-The RDS module currently skips a final snapshot and has no explicit automated backup retention. A full destroy removes the database and any changes to the demo data. Take and verify a separate RDS snapshot first if you need to preserve user changes.
+The RDS module enables seven-day automated backup retention, copy-tags-to-snapshot, and a final snapshot named `vikunja-final-snapshot`. Both S3 buckets enable object versioning. Use `scripts/backup-data.ps1` for a manual RDS snapshot and upload-bucket copy before data destruction.
 
 Keep the local state until destruction succeeds. Generated state, plans, credentials, and `.terraform/` are ignored by Git.

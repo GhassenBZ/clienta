@@ -23,7 +23,12 @@ resource "aws_db_instance" "main" {
   vpc_security_group_ids     = [var.security_group_id]
   publicly_accessible        = false
   multi_az                   = false
-  skip_final_snapshot        = true
+  backup_retention_period    = 7
+  backup_window              = "03:00-04:00"
+  copy_tags_to_snapshot      = true
+  delete_automated_backups   = false
+  final_snapshot_identifier  = "vikunja-final-snapshot"
+  skip_final_snapshot        = false
   auto_minor_version_upgrade = true
   deletion_protection        = false
 
