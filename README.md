@@ -59,7 +59,7 @@ Vikunja stores accounts and project/task data in RDS. Task attachments, uploaded
 
 ## Data and destroy warning
 
-The bootstrap seed repopulates the four demo accounts and three sample projects when it encounters a fresh database. It does not back up or restore changes made during a session. The current RDS module skips a final snapshot, so a full Terraform destroy removes the database and its data. Take and verify a separate RDS snapshot before destroying the lab if you need to preserve user changes.
+The bootstrap seed repopulates the four demo accounts and three sample projects when it encounters a fresh database. It does not back up or restore changes made during a session. The current RDS module skips a final snapshot, so a full Terraform destroy removes the database and its data. Before destroy, the Terraform configuration removes Vikunja upload objects from the private upload bucket so CloudFormation can delete the bucket. Take and verify a separate RDS snapshot and a backup of the upload bucket before destroying the lab if you need to preserve user changes or files.
 
 ```powershell
 terraform -chdir=infra plan -destroy -out=destroy.tfplan

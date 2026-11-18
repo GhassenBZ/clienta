@@ -160,7 +160,7 @@ Vikunja's file backend is used for user-uploaded content such as:
 
 RDS stores file metadata and application relationships, while the actual file bytes and generated previews are stored in S3. Every backend instance reads and writes the same objects, so an attachment, uploaded avatar, or uploaded project background remains available when requests reach a different backend instance.
 
-The separate artifact S3 bucket is for deployment files and runtime configuration. Vikunja's user-upload storage uses a separate private upload bucket.
+The separate artifact S3 bucket is for deployment files and runtime configuration. Vikunja's user-upload storage uses a separate private upload bucket. A Terraform destroy cleanup resource empties this bucket before the CloudFormation stack deletes it.
 
 ## Making uploaded files available across every backend
 

@@ -142,6 +142,17 @@ resource "aws_cloudformation_stack" "artifacts" {
   })
 }
 
+resource "terraform_data" "upload_bucket_cleanup" {
+  input = aws_cloudformation_stack.artifacts.outputs["UploadBucketName"]
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "aws s3 rm s3://${self.input}/ --recursive --region us-east-1"
+  }
+
+  depends_on = [aws_cloudformation_stack.artifacts]
+}
+
 resource "aws_s3_object" "frontend" {
   bucket                 = aws_cloudformation_stack.artifacts.outputs["ArtifactBucketName"]
   key                    = "vikunja-frontend.tar.gz"
