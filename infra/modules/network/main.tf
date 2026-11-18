@@ -111,16 +111,28 @@ resource "aws_vpc_endpoint" "s3" {
   route_table_ids   = [aws_route_table.public.id, aws_route_table.private_app.id]
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = "*"
-      Action    = "s3:GetObject"
-      Resource = [
-        "${var.artifact_bucket_arn}/vikunja-frontend.tar.gz",
-        "${var.artifact_bucket_arn}/vikunja-backend.tar.gz",
-        "${var.artifact_bucket_arn}/vikunja-runtime.json",
-      ]
-    }]
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource = [
+          "${var.artifact_bucket_arn}/vikunja-frontend.tar.gz",
+          "${var.artifact_bucket_arn}/vikunja-backend.tar.gz",
+          "${var.artifact_bucket_arn}/vikunja-runtime.json",
+        ]
+      },
+      {
+        Effect    = "Allow"
+        Principal = "*"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ]
+        Resource = "${var.upload_bucket_arn}/vikunja-files/*"
+      }
+    ]
   })
 
   tags = {

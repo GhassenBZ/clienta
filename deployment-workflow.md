@@ -148,7 +148,7 @@ The seeder reruns when a backend instance starts, but it is intended to avoid du
 
 ## 8. Handle application files
 
-The current Vikunja file-storage setting is local. Files are stored under `/var/lib/vikunja/files` on each backend instance.
+The Vikunja file-storage setting uses a private S3 upload bucket. The patched backend stores files under the `vikunja-files` base path and uses the EC2 instance role for AWS SDK credentials.
 
 Vikunja's file backend is used for user-uploaded content such as:
 
@@ -158,9 +158,9 @@ Vikunja's file backend is used for user-uploaded content such as:
 - uploaded project background images;
 - previews or cover images derived from task attachments and project backgrounds.
 
-Some of this content is stored as file records with metadata in RDS, but the actual file bytes and generated previews are stored on the configured file backend. An attachment, uploaded avatar, or uploaded project background may therefore be unavailable if a later request reaches another backend instance.
+RDS stores file metadata and application relationships, while the actual file bytes and generated previews are stored in S3. Every backend instance reads and writes the same objects, so an attachment, uploaded avatar, or uploaded project background remains available when requests reach a different backend instance.
 
-The separate artifact S3 bucket is for deployment files and runtime configuration. It is not currently configured as Vikunja's user-upload storage.
+The separate artifact S3 bucket is for deployment files and runtime configuration. Vikunja's user-upload storage uses a separate private upload bucket.
 
 ## Making uploaded files available across every backend
 
@@ -175,7 +175,7 @@ The separate objects should not be mixed with the deployment bundle objects. The
 - encryption enabled on the upload bucket;
 - lifecycle or backup rules only if needed.
 
-Vikunja needs this kind of file configuration:
+The implemented runtime configuration uses this structure:
 
 ```yaml
 files:
@@ -185,53 +185,26 @@ files:
     endpoint: https://s3.us-east-1.amazonaws.com
     bucket: your-private-vikunja-upload-bucket
     region: us-east-1
-    accesskey: sensitive-access-key
-    secretkey: sensitive-secret-key
     usepathstyle: false
 ```
 
-The exact credentials should not appear in source code or EC2 user data. They should be loaded from an encrypted private object or a supported secret mechanism.
+No access key or secret key is present in the runtime configuration. The rebuilt backend uses the AWS SDK default credential chain, which resolves the temporary credentials from the EC2 instance profile.
 
-However, the official Vikunja v2.8.0 binary inspected for this project has one important limitation: its S3 implementation explicitly requires `files.s3.accesskey` and `files.s3.secretkey`. It does not use the EC2 instance-role credential chain. That would require creating or obtaining access keys and storing them securely, which may not be possible or advisable in AWS Academy.
+The packaging script now:
 
-There are therefore two practical implementation choices:
+1. downloads and verifies the Vikunja v2.8.0 source;
+2. applies the reviewed instance-role patch;
+3. removes the SQLite-only fingerprint branch that prevents a CGO-free Linux build;
+4. cross-compiles the Linux AMD64 backend;
+5. verifies and includes the rebuilt binary in `vikunja-backend.tar.gz`.
 
-### Option A: Rebuild Vikunja to use the instance role
-
-Modify the pinned Vikunja v2.8.0 source so its S3 backend uses AWS SDK default credentials instead of requiring static keys. The package script would then:
-
-1. Download and verify the source.
-2. Apply the reviewed source patch.
-3. Cross-compile the Linux AMD64 backend.
-4. Verify the rebuilt binary.
-5. Include it in `vikunja-backend.tar.gz`.
-
-Terraform would add:
+Terraform provides:
 
 - a private upload bucket;
-- bucket policy permissions for `PutObject`, `GetObject`, `HeadObject`, and `DeleteObject`;
-- S3 gateway endpoint access for the upload prefix;
+- bucket policy permissions for `PutObject`, `GetObject`, and `DeleteObject`;
+- S3 gateway endpoint access for the `vikunja-files/*` prefix;
 - S3 file configuration in the runtime object;
-- no S3 access keys in the runtime configuration.
-
-This is the strongest AWS-native and Academy-friendly design only if the `LabInstanceProfile` or a permitted custom role has the required upload permissions.
-
-### Option B: Use static S3 credentials
-
-Create dedicated S3 credentials for Vikunja, place them in the private runtime configuration, and grant that identity only access to the upload prefix.
-
-This requires less source modification but is weaker for the lab because the credentials are long-lived and can be misused or exposed. It is possible only if AWS Academy permits the necessary IAM credential and bucket policy operations.
-
-### Option C: Use EFS instead
-
-Instead of configuring Vikunja's S3 backend, mount an EFS file system on every backend instance and keep `files.type: local` with a shared base path.
-
-This avoids static credentials and source changes, but:
-
-- EFS costs more than S3 for this small workload;
-- it adds EFS security groups and mount targets;
-- backend instances need EFS network access;
-- it has more infrastructure than an object-storage solution.
+- no static S3 access credentials.
 
 For this project, S3 with an instance-role-compatible Vikunja build is the cleanest solution. EFS is the simpler no-code-change fallback. The official binary alone cannot provide instance-role S3 access in v2.8.0.
 

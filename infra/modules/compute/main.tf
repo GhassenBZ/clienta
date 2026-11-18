@@ -184,6 +184,7 @@ resource "aws_autoscaling_group" "frontend" {
   min_size                  = 2
   desired_capacity          = 2
   max_size                  = 4
+  wait_for_capacity_timeout = "0"
   vpc_zone_identifier       = var.frontend_subnet_ids
   target_group_arns         = [var.frontend_target_group_arn]
   health_check_type         = "ELB"
@@ -227,6 +228,7 @@ resource "aws_autoscaling_group" "backend" {
   min_size                  = 2
   desired_capacity          = 2
   max_size                  = 4
+  wait_for_capacity_timeout = "0"
   vpc_zone_identifier       = var.backend_subnet_ids
   target_group_arns         = [var.backend_target_group_arn]
   health_check_type         = "ELB"

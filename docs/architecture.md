@@ -21,19 +21,19 @@ Terraform creates:
 - the VPC, six subnets, internet gateway, and route tables;
 - an internet-facing ALB, listener, frontend/backend target groups, API path rule, health checks, and tier security groups;
 - separate frontend and backend launch templates and Auto Scaling groups, each with a desired/minimum capacity of two and maximum capacity of four across both AZs;
-- CPU target-tracking policies for both groups and rolling instance refreshes when launch templates change;
+- CPU target-tracking policies for both groups and rolling instance refreshes when launch templates change; Terraform does not wait for ASG desired capacity because AWS Academy may block the ASG service-linked-role validation;
 - encrypted gp3 root volumes and the AWS Academy `LabInstanceProfile` for all instances;
 - a private MySQL 8.0 RDS instance;
-- an encrypted, private S3 bucket provisioned by a Terraform-managed CloudFormation stack.
+- two encrypted, private S3 buckets created by a Terraform-managed CloudFormation stack: one for deployment artifacts and one for Vikunja uploads.
 
 The S3 bucket contains separately packaged frontend and backend bundles plus a JSON runtime configuration. The bucket policy and S3 endpoint restrict EC2 `GetObject` access to those three objects. The runtime configuration contains the RDS password and a stable Vikunja signing secret; backend instances download it at boot, so neither value is embedded in the repository or user data. Terraform state and the S3 object remain sensitive and must be kept private.
 
-Frontend instances install the bundled Nginx RPM, copy the static assets, and run Nginx under systemd with SPA fallback and a `/health` endpoint. Backend instances run the Vikunja server and a systemd oneshot seeder that uses the CLI and API to create demo accounts with public, disposable credentials and shared projects. Public registration is disabled. The seeder checks existing records to avoid duplicating data when instances are replaced but RDS remains.
+Frontend instances install the bundled Nginx RPM, copy the static assets, and run Nginx under systemd with SPA fallback and a `/health` endpoint. Backend instances run the Vikunja server and a systemd oneshot seeder that uses the CLI and API to create demo accounts with public, disposable credentials and shared projects. Public registration is enabled. The seeder checks existing records to avoid duplicating data when instances are replaced but RDS remains.
 
 ## Limits and remaining work
 
 - The frontend and backend groups each run at least two instances across the configured AZs. These settings are implemented in Terraform but have not been applied or demonstrated in AWS.
-- Vikunja task attachments use local backend-instance storage; they are not shared across the backend ASG and do not survive instance replacement.
+- Vikunja task attachments, uploaded avatars, project backgrounds, and generated image content use a dedicated private S3 upload bucket and are shared across the backend ASG.
 - The RDS module does not configure automated backup retention and skips a final snapshot. A full Terraform destroy removes the database; a fresh database is repopulated only with the sample seed.
 - Terraform state is local rather than shared and session-surviving.
 - CloudWatch log groups, dashboard, and operational alarms are not configured; target-tracking policies create AWS-managed scaling alarms. SSH is still allowed from the full VPC CIDR and should be narrowed.

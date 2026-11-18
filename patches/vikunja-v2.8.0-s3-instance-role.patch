@@ -1,0 +1,35 @@
+--- a/pkg/files/filehandling.go
++++ b/pkg/files/filehandling.go
+@@ -29,7 +29,6 @@ import (
+ 	"github.com/aws/aws-sdk-go-v2/aws"
+ 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+ 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+-	"github.com/aws/aws-sdk-go-v2/credentials"
+ 	"github.com/aws/aws-sdk-go-v2/service/s3"
+ 	"github.com/stretchr/testify/require"
+ )
+@@ -45,21 +44,16 @@ func initS3FileHandler(ctx context.Context) error {
+ 	endpoint := config.FilesS3Endpoint.GetString()
+ 	bucket := config.FilesS3Bucket.GetString()
+ 	region := config.FilesS3Region.GetString()
+-	accessKey := config.FilesS3AccessKey.GetString()
+-	secretKey := config.FilesS3SecretKey.GetString()
+ 
+ 	if endpoint == "" {
+ 		return errors.New("S3 endpoint is not configured. Please set files.s3.endpoint")
+ 	}
+ 	if bucket == "" {
+ 		return errors.New("S3 bucket is not configured. Please set files.s3.bucket")
+ 	}
+-	if accessKey == "" {
+-		return errors.New("S3 access key is not configured. Please set files.s3.accesskey")
+-	}
+-	if secretKey == "" {
+-		return errors.New("S3 secret key is not configured. Please set files.s3.secretkey")
+-	}
+ 
+ 	// Create AWS SDK v2 config
+ 	cfg, err := awsconfig.LoadDefaultConfig(ctx,
+ 		awsconfig.WithRegion(region),
+-		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
+ 	)

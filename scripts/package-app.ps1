@@ -19,6 +19,19 @@ $sourceSha256 = "59ac49e27ab346d07c5db324083d16392e8de338486dd32d26a008f40653e4f
 $nginxUrl = "https://nginx.org/packages/amzn/2023/x86_64/RPMS/nginx-1.28.2-1.amzn2023.ngx.x86_64.rpm"
 $nginxSha256 = "1d5cbc8ebf854232f758d467ba46c91f59bd5d779534cb30ef2f2b173a418c66"
 
+function Get-Pin {
+    param(
+        [string]$Name,
+        [string]$Command
+    )
+
+    $pin = Get-Command $Command -ErrorAction SilentlyContinue
+    if (-not $pin) {
+        throw "$Name is required to package Vikunja."
+    }
+    return $pin
+}
+
 function New-DeterministicTarGz {
     param(
         [string]$SourceDirectory,
@@ -88,6 +101,28 @@ if ($LASTEXITCODE -ne 0 -or $pnpmVersion -ne "12.16.1") {
     throw "The Vikunja frontend requires pnpm 12.16.1; found $pnpmVersion."
 }
 
+$goCommand = Get-Command go.exe -ErrorAction SilentlyContinue
+if (-not $goCommand) {
+    $goCommand = Get-Command go -ErrorAction SilentlyContinue
+}
+if (-not $goCommand) {
+    $installedGo = Join-Path $env:ProgramFiles "Go\bin\go.exe"
+    if (Test-Path -LiteralPath $installedGo) {
+        $goCommand = Get-Item -LiteralPath $installedGo
+    }
+}
+if (-not $goCommand) {
+    throw "Go 1.27 or newer is required to rebuild Vikunja for Linux AMD64."
+}
+$goExecutable = Join-Path $env:ProgramFiles "Go\bin\go.exe"
+if (-not (Test-Path -LiteralPath $goExecutable)) {
+    throw "The Go executable was not found at $goExecutable."
+}
+$goVersionOutput = (& $goExecutable version).Trim()
+if ($LASTEXITCODE -ne 0 -or $goVersionOutput -notmatch "go1\.(\d+)") {
+    throw "Could not determine the installed Go version."
+}
+
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 Invoke-WebRequest -Uri $releaseUrl -OutFile $releaseArchive -UseBasicParsing
 $actualReleaseSha256 = (Get-FileHash -LiteralPath $releaseArchive -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -113,10 +148,9 @@ New-Item -ItemType Directory -Path $sourceDir -Force | Out-Null
 Expand-Archive -LiteralPath $releaseArchive -DestinationPath $releaseDir -Force
 Expand-Archive -LiteralPath $sourceArchive -DestinationPath $sourceDir -Force
 
-$binary = @(Get-ChildItem -LiteralPath $releaseDir -Recurse -File | Where-Object { $_.Name -eq "vikunja-v2.8.0-linux-amd64" })
 $backendLicense = @(Get-ChildItem -LiteralPath $releaseDir -Recurse -File | Where-Object { $_.Name -eq "LICENSE" })
-if ($binary.Count -ne 1 -or $backendLicense.Count -ne 1) {
-    throw "The verified Vikunja server release did not contain exactly one binary and license."
+if ($backendLicense.Count -ne 1) {
+    throw "The verified Vikunja server release did not contain exactly one license."
 }
 
 $sourceRoot = Join-Path $sourceDir "vikunja-2.8.0"
@@ -125,6 +159,49 @@ $frontendLicense = Join-Path $frontendSource "LICENSE"
 if (-not (Test-Path -LiteralPath $frontendLicense)) {
     throw "The pinned Vikunja source archive does not contain the frontend license."
 }
+
+$fileHandlingSource = Join-Path $sourceRoot "pkg\files\filehandling.go"
+$instanceRolePatch = Join-Path $repoRoot "patches\vikunja-v2.8.0-s3-instance-role.patch"
+if (-not (Test-Path -LiteralPath $fileHandlingSource) -or -not (Test-Path -LiteralPath $instanceRolePatch)) {
+    throw "The Vikunja source or instance-role patch is missing."
+}
+
+$fileHandling = [System.IO.File]::ReadAllText($fileHandlingSource)
+$replacements = @{
+    "`t`"github.com/aws/aws-sdk-go-v2/credentials`"`n" = ""
+    "`taccessKey := config.FilesS3AccessKey.GetString()`n`tsecretKey := config.FilesS3SecretKey.GetString()`n" = ""
+    "`tif accessKey == `"`" {`n`t`treturn errors.New(`"S3 access key is not configured. Please set files.s3.accesskey`")`n`t}`n`tif secretKey == `"`" {`n`t`treturn errors.New(`"S3 secret key is not configured. Please set files.s3.secretkey`")`n`t}`n" = ""
+    "`t`tawsconfig.WithRegion(region),`n`t`tawsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, `"`")),`n" = "`t`tawsconfig.WithRegion(region),`n"
+}
+foreach ($oldText in $replacements.Keys) {
+    if (-not $fileHandling.Contains($oldText)) {
+        throw "The pinned Vikunja source no longer contains an expected instance-role patch section."
+    }
+    $fileHandling = $fileHandling.Replace($oldText, $replacements[$oldText])
+}
+[System.IO.File]::WriteAllText(
+    $fileHandlingSource,
+    $fileHandling,
+    [System.Text.UTF8Encoding]::new($false)
+)
+
+$fingerprintSource = Join-Path $sourceRoot "pkg\errorreport\fingerprint.go"
+$fingerprint = [System.IO.File]::ReadAllText($fingerprintSource)
+$fingerprintReplacements = @{
+    "`t`"github.com/mattn/go-sqlite3`"`n" = ""
+    "`tvar liteErr sqlite3.Error`n`tif errors.As(err, &liteErr) {`n`t`treturn []string{`"sqlite`", strconv.Itoa(int(liteErr.Code)), strconv.Itoa(int(liteErr.ExtendedCode)), Normalize(liteErr.Error())}`n`t}`n`n" = ""
+}
+foreach ($oldText in $fingerprintReplacements.Keys) {
+    if (-not $fingerprint.Contains($oldText)) {
+        throw "The pinned Vikunja source no longer contains an expected SQLite fingerprint section."
+    }
+    $fingerprint = $fingerprint.Replace($oldText, $fingerprintReplacements[$oldText])
+}
+[System.IO.File]::WriteAllText(
+    $fingerprintSource,
+    $fingerprint,
+    [System.Text.UTF8Encoding]::new($false)
+)
 
 Push-Location $frontendSource
 try {
@@ -151,13 +228,37 @@ if (-not (Test-Path -LiteralPath (Join-Path $frontendDist "index.html"))) {
     throw "The Vikunja frontend build did not produce dist/index.html."
 }
 
+$patchedBinary = Join-Path $buildDir "vikunja-instance-role-linux-amd64"
+Push-Location $sourceRoot
+try {
+    $previousGoos = $env:GOOS
+    $previousGoarch = $env:GOARCH
+    $previousCgo = $env:CGO_ENABLED
+    $env:GOOS = "linux"
+    $env:GOARCH = "amd64"
+    $env:CGO_ENABLED = "0"
+    & $goExecutable build -tags "osusergo" -ldflags "-X code.vikunja.io/api/pkg/version.Version=v2.8.0-instance-role" -o $patchedBinary .
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to rebuild the Vikunja Linux AMD64 binary with AWS instance-role credentials."
+    }
+}
+finally {
+    $env:GOOS = $previousGoos
+    $env:GOARCH = $previousGoarch
+    $env:CGO_ENABLED = $previousCgo
+    Pop-Location
+}
+if (-not (Test-Path -LiteralPath $patchedBinary)) {
+    throw "The rebuilt Vikunja binary was not produced."
+}
+
 $backendVikunjaDir = Join-Path $backendStageDir "vikunja"
 $frontendWebDir = Join-Path $frontendStageDir "www"
 $nginxDir = Join-Path $frontendStageDir "nginx"
 New-Item -ItemType Directory -Path $backendVikunjaDir -Force | Out-Null
 New-Item -ItemType Directory -Path $frontendWebDir -Force | Out-Null
 New-Item -ItemType Directory -Path $nginxDir -Force | Out-Null
-Copy-Item -LiteralPath $binary[0].FullName -Destination (Join-Path $backendVikunjaDir "vikunja")
+Copy-Item -LiteralPath $patchedBinary -Destination (Join-Path $backendVikunjaDir "vikunja")
 Copy-Item -LiteralPath (Join-Path $repoRoot "vikunja\seed-demo.py") -Destination $backendVikunjaDir
 Copy-Item -LiteralPath (Join-Path $repoRoot "vikunja\demo-data.json") -Destination $backendVikunjaDir
 Copy-Item -LiteralPath $backendLicense[0].FullName -Destination (Join-Path $backendVikunjaDir "LICENSE.vikunja")
@@ -179,6 +280,6 @@ Write-Output "Vikunja release SHA-256: $releaseSha256"
 Write-Output "Vikunja source SHA-256: $sourceSha256"
 Write-Output "Nginx RPM SHA-256: $nginxSha256"
 
-foreach ($path in @($releaseArchive, $sourceArchive, $backendStageDir, $frontendStageDir, $releaseDir, $sourceDir, $nginxRpmDir)) {
+foreach ($path in @($releaseArchive, $sourceArchive, $backendStageDir, $frontendStageDir, $releaseDir, $sourceDir, $nginxRpmDir, $patchedBinary)) {
     Remove-Item -LiteralPath $path -Recurse -Force
 }

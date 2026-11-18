@@ -14,7 +14,7 @@ locals {
     service = {
       interface          = ":8080"
       publicurl          = "http://${module.network.alb_dns_name}/"
-      enableregistration = false
+      enableregistration = true
       rootpath           = "/var/lib/vikunja"
       secret             = sha256("${var.db_password}:vikunja-jwt")
     }
@@ -29,8 +29,15 @@ locals {
       maxidleconnections = 5
     }
     files = {
-      type     = "local"
-      basepath = "/var/lib/vikunja/files"
+      type     = "s3"
+      basepath = "vikunja-files"
+      s3 = {
+        endpoint       = "https://s3.us-east-1.amazonaws.com"
+        bucket         = "vikunja-uploads-${data.aws_caller_identity.current.account_id}"
+        region         = "us-east-1"
+        usepathstyle   = false
+        disablesigning = false
+      }
     }
   })
   runtime_config_sha256 = sha256(local.runtime_config_content)
@@ -52,69 +59,91 @@ resource "aws_cloudformation_stack" "artifacts" {
             RestrictPublicBuckets = true
           }
           BucketEncryption = {
-            ServerSideEncryptionConfiguration = [
-              {
-                ServerSideEncryptionByDefault = {
-                  SSEAlgorithm = "AES256"
-                }
+            ServerSideEncryptionConfiguration = [{
+              ServerSideEncryptionByDefault = {
+                SSEAlgorithm = "AES256"
               }
-            ]
+            }]
           }
           Tags = [
-            {
-              Key   = "Name"
-              Value = "vikunja-artifacts"
-            },
-            {
-              Key   = "Project"
-              Value = "vikunja"
-            }
+            { Key = "Name", Value = "vikunja-artifacts" },
+            { Key = "Project", Value = "vikunja" },
+          ]
+        }
+      }
+      UploadBucket = {
+        Type = "AWS::S3::Bucket"
+        Properties = {
+          BucketName = "vikunja-uploads-${data.aws_caller_identity.current.account_id}"
+          PublicAccessBlockConfiguration = {
+            BlockPublicAcls       = true
+            BlockPublicPolicy     = true
+            IgnorePublicAcls      = true
+            RestrictPublicBuckets = true
+          }
+          BucketEncryption = {
+            ServerSideEncryptionConfiguration = [{
+              ServerSideEncryptionByDefault = {
+                SSEAlgorithm = "AES256"
+              }
+            }]
+          }
+          Tags = [
+            { Key = "Name", Value = "vikunja-uploads" },
+            { Key = "Project", Value = "vikunja" },
           ]
         }
       }
       ArtifactBucketPolicy = {
         Type = "AWS::S3::BucketPolicy"
         Properties = {
-          Bucket = {
-            Ref = "ArtifactBucket"
-          }
+          Bucket = { Ref = "ArtifactBucket" }
           PolicyDocument = {
             Version = "2012-10-17"
-            Statement = [
-              {
-                Effect = "Allow"
-                Principal = {
-                  AWS = data.aws_iam_instance_profile.lab.role_arn
-                }
-                Action = "s3:GetObject"
-                Resource = [
-                  "arn:aws:s3:::vikunja-artifacts-${data.aws_caller_identity.current.account_id}/vikunja-frontend.tar.gz",
-                  "arn:aws:s3:::vikunja-artifacts-${data.aws_caller_identity.current.account_id}/vikunja-backend.tar.gz",
-                  "arn:aws:s3:::vikunja-artifacts-${data.aws_caller_identity.current.account_id}/${local.runtime_config_key}"
-                ]
-              }
-            ]
+            Statement = [{
+              Effect    = "Allow"
+              Principal = { AWS = data.aws_iam_instance_profile.lab.role_arn }
+              Action    = "s3:GetObject"
+              Resource = [
+                "arn:aws:s3:::vikunja-artifacts-${data.aws_caller_identity.current.account_id}/vikunja-frontend.tar.gz",
+                "arn:aws:s3:::vikunja-artifacts-${data.aws_caller_identity.current.account_id}/vikunja-backend.tar.gz",
+                "arn:aws:s3:::vikunja-artifacts-${data.aws_caller_identity.current.account_id}/${local.runtime_config_key}",
+              ]
+            }]
+          }
+        }
+      }
+      UploadBucketPolicy = {
+        Type = "AWS::S3::BucketPolicy"
+        Properties = {
+          Bucket = { Ref = "UploadBucket" }
+          PolicyDocument = {
+            Version = "2012-10-17"
+            Statement = [{
+              Effect    = "Allow"
+              Principal = { AWS = data.aws_iam_instance_profile.lab.role_arn }
+              Action = [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject",
+              ]
+              Resource = "arn:aws:s3:::vikunja-uploads-${data.aws_caller_identity.current.account_id}/vikunja-files/*"
+            }]
           }
         }
       }
     }
     Outputs = {
-      BucketName = {
-        Value = {
-          Ref = "ArtifactBucket"
-        }
-      }
-      BucketArn = {
-        Value = {
-          "Fn::GetAtt" = ["ArtifactBucket", "Arn"]
-        }
-      }
+      ArtifactBucketName = { Value = { Ref = "ArtifactBucket" } }
+      ArtifactBucketArn  = { Value = { "Fn::GetAtt" = ["ArtifactBucket", "Arn"] } }
+      UploadBucketName   = { Value = { Ref = "UploadBucket" } }
+      UploadBucketArn    = { Value = { "Fn::GetAtt" = ["UploadBucket", "Arn"] } }
     }
   })
 }
 
 resource "aws_s3_object" "frontend" {
-  bucket                 = aws_cloudformation_stack.artifacts.outputs["BucketName"]
+  bucket                 = aws_cloudformation_stack.artifacts.outputs["ArtifactBucketName"]
   key                    = "vikunja-frontend.tar.gz"
   source                 = local.frontend_bundle_path
   source_hash            = local.frontend_bundle_sha256
@@ -123,7 +152,7 @@ resource "aws_s3_object" "frontend" {
 }
 
 resource "aws_s3_object" "backend" {
-  bucket                 = aws_cloudformation_stack.artifacts.outputs["BucketName"]
+  bucket                 = aws_cloudformation_stack.artifacts.outputs["ArtifactBucketName"]
   key                    = "vikunja-backend.tar.gz"
   source                 = local.backend_bundle_path
   source_hash            = local.backend_bundle_sha256
@@ -132,7 +161,7 @@ resource "aws_s3_object" "backend" {
 }
 
 resource "aws_s3_object" "runtime_config" {
-  bucket                 = aws_cloudformation_stack.artifacts.outputs["BucketName"]
+  bucket                 = aws_cloudformation_stack.artifacts.outputs["ArtifactBucketName"]
   key                    = local.runtime_config_key
   content                = local.runtime_config_content
   source_hash            = local.runtime_config_sha256
@@ -143,7 +172,8 @@ resource "aws_s3_object" "runtime_config" {
 module "network" {
   source = "./modules/network"
 
-  artifact_bucket_arn = aws_cloudformation_stack.artifacts.outputs["BucketArn"]
+  artifact_bucket_arn = aws_cloudformation_stack.artifacts.outputs["ArtifactBucketArn"]
+  upload_bucket_arn   = aws_cloudformation_stack.artifacts.outputs["UploadBucketArn"]
 }
 
 module "security" {
@@ -170,7 +200,7 @@ module "compute" {
   backend_subnet_ids         = module.network.private_app_subnet_ids
   frontend_security_group_id = module.security.frontend_security_group_id
   backend_security_group_id  = module.security.backend_security_group_id
-  artifact_bucket_name       = aws_cloudformation_stack.artifacts.outputs["BucketName"]
+  artifact_bucket_name       = aws_cloudformation_stack.artifacts.outputs["ArtifactBucketName"]
   frontend_bundle_key        = aws_s3_object.frontend.key
   backend_bundle_key         = aws_s3_object.backend.key
   runtime_config_key         = aws_s3_object.runtime_config.key

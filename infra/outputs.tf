@@ -30,7 +30,12 @@ output "backend_asg_name" {
 
 output "artifact_bucket_name" {
   description = "Private S3 bucket containing separate frontend, backend, and runtime bundles."
-  value       = aws_cloudformation_stack.artifacts.outputs["BucketName"]
+  value       = aws_cloudformation_stack.artifacts.outputs["ArtifactBucketName"]
+}
+
+output "upload_bucket_name" {
+  description = "Private S3 bucket containing Vikunja uploaded files."
+  value       = aws_cloudformation_stack.artifacts.outputs["UploadBucketName"]
 }
 
 output "s3_gateway_endpoint_id" {

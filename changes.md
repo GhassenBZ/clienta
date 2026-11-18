@@ -11,7 +11,7 @@ This branch replaces the former Clienta application with Vikunja v2.8.0. The imp
 - Frontend and backend instances run in private application subnets in two Auto Scaling groups.
 - RDS stores Vikunja accounts and project/task records. Both ASGs have a minimum and desired capacity of two and a maximum of four.
 - A private S3 bucket holds deployment bundles and runtime configuration. The gateway endpoint permits only the required `GetObject` requests.
-- Backend configuration disables public registration and connects to private MySQL. Uploaded attachments remain on backend local storage and are not shared across instances.
+- Backend configuration enables public registration and connects to private MySQL. Vikunja file storage uses a dedicated private S3 bucket so uploaded attachments, avatars, backgrounds, and previews are shared across backend instances.
 
 S3 stores the frontend deployment bundle and cannot execute Nginx itself. Frontend instances download the bundle, install the pinned Nginx RPM locally, and start Nginx through systemd.
 
