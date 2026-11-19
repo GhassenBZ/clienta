@@ -7,8 +7,8 @@ This branch replaces the former Clienta application with Vikunja v2.8.0. The imp
 - `scripts/package-app.ps1` verifies pinned Vikunja server and source archives and creates:
   - `build/vikunja-frontend.tar.gz` containing the built static browser assets, a pinned Nginx RPM, and Nginx configuration.
   - `build/vikunja-backend.tar.gz` containing the Vikunja binary, license, demo seeder, and seed data.
-- The public ALB serves the static frontend target group by default and forwards `/api/*`, `/dav*`, and `/.well-known/caldav*` to the backend target group.
-- Frontend and backend instances run in private application subnets in two Auto Scaling groups.
+- The public ALB serves the static frontend target group by default. Frontend Nginx proxies `/api/*`, `/dav*`, and `/.well-known/caldav*` to a private internal ALB, which load-balances the backend ASG.
+- Frontend instances run in private frontend subnets and backend instances run in separate private backend subnets in two Auto Scaling groups.
 - RDS stores Vikunja accounts and project/task records. Both ASGs have a minimum and desired capacity of two and a maximum of four.
 - A private S3 bucket holds deployment bundles and runtime configuration. The gateway endpoint permits only the required `GetObject` requests.
 - Backend configuration enables public registration and connects to private MySQL. Vikunja file storage uses a dedicated private S3 bucket so uploaded attachments, avatars, backgrounds, and previews are shared across backend instances.

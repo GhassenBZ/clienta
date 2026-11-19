@@ -30,11 +30,11 @@ resource "aws_security_group" "backend" {
   vpc_id      = var.vpc_id
 
   ingress {
-    description     = "Allow API traffic from the ALB"
+    description     = "Allow API traffic from the internal ALB"
     from_port       = 8080
     to_port         = 8080
     protocol        = "tcp"
-    security_groups = [var.alb_security_group_id]
+    security_groups = [var.internal_alb_security_group_id]
   }
 
   ingress {

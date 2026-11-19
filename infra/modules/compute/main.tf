@@ -52,6 +52,8 @@ resource "aws_launch_template" "frontend" {
               cp -a /opt/vikunja/frontend/www/. /var/www/vikunja/
               dnf install -y --disablerepo='*' /opt/vikunja/frontend/nginx/nginx.rpm
               install -m 0644 /opt/vikunja/frontend/nginx/nginx.conf /etc/nginx/nginx.conf
+              sed -i 's|__INTERNAL_API_DNS__|${var.internal_api_dns_name}|g' /etc/nginx/nginx.conf
+              nginx -t
               systemctl daemon-reload
               systemctl enable --now nginx.service
               rm -f /tmp/vikunja-frontend.tar.gz

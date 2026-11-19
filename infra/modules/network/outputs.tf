@@ -9,8 +9,13 @@ output "public_subnet_ids" {
 }
 
 output "private_app_subnet_ids" {
-  description = "IDs of the private application subnets."
+  description = "IDs of the private frontend subnets."
   value       = aws_subnet.private_app[*].id
+}
+
+output "private_backend_subnet_ids" {
+  description = "IDs of the private backend subnets."
+  value       = aws_subnet.private_backend[*].id
 }
 
 output "private_data_subnet_ids" {
@@ -46,4 +51,14 @@ output "frontend_target_group_arn" {
 output "backend_target_group_arn" {
   description = "ARN of the ALB target group for the Vikunja API."
   value       = aws_lb_target_group.backend.arn
+}
+
+output "internal_alb_dns_name" {
+  description = "DNS name of the private frontend-to-backend API load balancer."
+  value       = aws_lb.internal.dns_name
+}
+
+output "internal_alb_security_group_id" {
+  description = "Security group ID of the private API load balancer."
+  value       = aws_security_group.internal_alb.id
 }

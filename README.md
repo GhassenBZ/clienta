@@ -47,8 +47,7 @@ terraform -chdir=infra output -raw alb_dns_name
 
 - Public HTTP Application Load Balancer in two public subnets.
 - Separate frontend and backend EC2 Auto Scaling groups, each spanning two Availability Zones, with a minimum and desired capacity of two and a maximum of four.
-- The frontend and backend ASGs run in private application subnets. Frontend instances have no public IP and install the bundled Nginx RPM before serving the static files; their security group accepts HTTP only from the ALB. Backend instances run Vikunja's API.
-- The ALB serves the frontend by default and routes `/api/*`, `/dav*`, and `/.well-known/caldav*` to the backend target group.
+- Frontend instances run in private frontend subnets and backend instances run in separate private backend subnets. The public ALB serves static frontend traffic. Frontend Nginx proxies API and CalDAV requests to a private internal ALB, which load-balances the backend ASG.
 - CPU target-tracking policies scale each ASG toward 60% average utilization. Launch-template changes use rolling instance refreshes. Terraform creates ASGs without waiting for instance capacity because AWS Academy may block the ASG service-linked-role validation even when console ASGs succeed.
 - Private MySQL 8.0 RDS in the data subnets.
 - A private, encrypted S3 bucket stores separate frontend/backend bundles and the runtime configuration. The existing `LabInstanceProfile` can download only those objects through the S3 gateway endpoint; no custom IAM role or NAT gateway is created.

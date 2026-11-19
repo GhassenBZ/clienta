@@ -52,6 +52,21 @@ resource "aws_subnet" "private_app" {
   }
 }
 
+resource "aws_subnet" "private_backend" {
+  count = 2
+
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = ["10.0.31.0/24", "10.0.32.0/24"][count.index]
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
+  map_public_ip_on_launch = false
+
+  tags = {
+    Name    = "vikunja-backend-app-${count.index + 1}"
+    Project = "vikunja"
+    Tier    = "private-backend"
+  }
+}
+
 resource "aws_subnet" "private_data" {
   count = 2
 
@@ -104,11 +119,27 @@ resource "aws_route_table_association" "private_app" {
   route_table_id = aws_route_table.private_app.id
 }
 
+resource "aws_route_table" "private_backend" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name    = "vikunja-private-backend-rt"
+    Project = "vikunja"
+  }
+}
+
+resource "aws_route_table_association" "private_backend" {
+  count = length(aws_subnet.private_backend)
+
+  subnet_id      = aws_subnet.private_backend[count.index].id
+  route_table_id = aws_route_table.private_backend.id
+}
+
 resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.us-east-1.s3"
   vpc_endpoint_type = "Gateway"
-  route_table_ids   = [aws_route_table.public.id, aws_route_table.private_app.id]
+  route_table_ids   = [aws_route_table.public.id, aws_route_table.private_app.id, aws_route_table.private_backend.id]
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -162,6 +193,32 @@ resource "aws_security_group" "alb" {
 
   tags = {
     Name    = "vikunja-alb-sg"
+    Project = "vikunja"
+  }
+}
+
+resource "aws_security_group" "internal_alb" {
+  name        = "vikunja-internal-alb-sg"
+  description = "Private API load balancer security group"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "Allow API traffic from private frontend subnets"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.11.0/24", "10.0.12.0/24"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name    = "vikunja-internal-alb-sg"
     Project = "vikunja"
   }
 }
@@ -223,9 +280,29 @@ resource "aws_lb_target_group" "backend" {
     matcher             = "200"
   }
 
+}
+
+resource "aws_lb" "internal" {
+  name               = "vikunja-internal-alb"
+  internal           = true
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.internal_alb.id]
+  subnets            = aws_subnet.private_app[*].id
+
   tags = {
-    Name    = "vikunja-backend-tg"
+    Name    = "vikunja-internal-alb"
     Project = "vikunja"
+  }
+}
+
+resource "aws_lb_listener" "internal" {
+  load_balancer_arn = aws_lb.internal.arn
+  port              = 8080
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
   }
 }
 
@@ -242,21 +319,5 @@ resource "aws_lb_listener" "http" {
   tags = {
     Name    = "vikunja-http-listener"
     Project = "vikunja"
-  }
-}
-
-resource "aws_lb_listener_rule" "backend_api" {
-  listener_arn = aws_lb_listener.http.arn
-  priority     = 100
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.backend.arn
-  }
-
-  condition {
-    path_pattern {
-      values = ["/api/*", "/dav*", "/.well-known/caldav*"]
-    }
   }
 }

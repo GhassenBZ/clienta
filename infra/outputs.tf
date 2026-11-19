@@ -14,8 +14,18 @@ output "public_subnet_ids" {
 }
 
 output "private_app_subnet_ids" {
-  description = "IDs of the private application subnets."
+  description = "IDs of the private frontend subnets."
   value       = module.network.private_app_subnet_ids
+}
+
+output "private_backend_subnet_ids" {
+  description = "IDs of the private backend subnets."
+  value       = module.network.private_backend_subnet_ids
+}
+
+output "internal_alb_dns_name" {
+  description = "DNS name of the private frontend-to-backend API load balancer."
+  value       = module.network.internal_alb_dns_name
 }
 
 output "frontend_asg_name" {

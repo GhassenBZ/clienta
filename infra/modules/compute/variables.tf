@@ -1,5 +1,5 @@
 variable "frontend_subnet_ids" {
-  description = "Private application subnets used by the static frontend Auto Scaling group."
+  description = "Private frontend subnets used by the static frontend Auto Scaling group."
   type        = list(string)
 }
 
@@ -65,5 +65,10 @@ variable "frontend_target_group_arn" {
 
 variable "backend_target_group_arn" {
   description = "ARN of the ALB target group for the Vikunja API."
+  type        = string
+}
+
+variable "internal_api_dns_name" {
+  description = "Private DNS name of the internal ALB used by frontend instances to reach Vikunja."
   type        = string
 }

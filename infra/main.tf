@@ -190,8 +190,9 @@ module "network" {
 module "security" {
   source = "./modules/security"
 
-  vpc_id                = module.network.vpc_id
-  alb_security_group_id = module.network.alb_security_group_id
+  vpc_id                         = module.network.vpc_id
+  alb_security_group_id          = module.network.alb_security_group_id
+  internal_alb_security_group_id = module.network.internal_alb_security_group_id
 }
 
 module "database" {
@@ -208,7 +209,7 @@ module "compute" {
   source = "./modules/compute"
 
   frontend_subnet_ids        = module.network.private_app_subnet_ids
-  backend_subnet_ids         = module.network.private_app_subnet_ids
+  backend_subnet_ids         = module.network.private_backend_subnet_ids
   frontend_security_group_id = module.security.frontend_security_group_id
   backend_security_group_id  = module.security.backend_security_group_id
   artifact_bucket_name       = aws_cloudformation_stack.artifacts.outputs["ArtifactBucketName"]
@@ -221,6 +222,7 @@ module "compute" {
   instance_profile_name      = data.aws_iam_instance_profile.lab.name
   frontend_target_group_arn  = module.network.frontend_target_group_arn
   backend_target_group_arn   = module.network.backend_target_group_arn
+  internal_api_dns_name      = module.network.internal_alb_dns_name
 
   depends_on = [
     module.network,

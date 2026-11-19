@@ -2,24 +2,25 @@
 
 ## Application
 
-This branch packages the official Vikunja v2.8.0 browser frontend and API as separate deployment bundles. The frontend bundle contains the static browser assets, a pinned Nginx RPM, and Nginx configuration for a multi-AZ frontend Auto Scaling group in private application subnets; the Vikunja API runs in a separate multi-AZ backend Auto Scaling group. Account, project, and task records persist in MySQL on RDS. The backend first-boot seeder creates four real demo accounts, three shared projects, and 44 dated tasks with Kanban buckets, labels, assignments, and comments.
+This branch packages the official Vikunja v2.8.0 browser frontend and API as separate deployment bundles. The frontend bundle contains the static browser assets, a pinned Nginx RPM, and Nginx configuration for a multi-AZ frontend Auto Scaling group in private frontend subnets; the Vikunja API runs in a separate multi-AZ backend Auto Scaling group in private backend subnets. Frontend Nginx proxies API and CalDAV traffic to an internal ALB. Account, project, and task records persist in MySQL on RDS. The backend first-boot seeder creates four real demo accounts, three shared projects, and 44 dated tasks with Kanban buckets, labels, assignments, and comments.
 
 ## Network and data path
 
 The VPC uses `10.0.0.0/16` in `us-east-1` with two Availability Zones:
 
 - public subnets: `10.0.1.0/24`, `10.0.2.0/24`;
-- private application subnets: `10.0.11.0/24`, `10.0.12.0/24`;
+- private frontend subnets: `10.0.11.0/24`, `10.0.12.0/24`;
+- private backend subnets: `10.0.31.0/24`, `10.0.32.0/24`;
 - private data subnets: `10.0.21.0/24`, `10.0.22.0/24`.
 
-The public Application Load Balancer accepts HTTP on port 80. It forwards ordinary browser paths to the frontend target group on port 80, and routes `/api/*`, `/dav*`, and `/.well-known/caldav*` to the private backend target group on port 8080. The frontend build leaves `window.API_URL` empty so browser API calls remain same-origin and are routed by the ALB. Frontend and backend health checks use `/health` and `/api/v1/info`, respectively. The RDS security group allows MySQL only from the backend security group. The S3 gateway endpoint lets the instances download their respective bundles and private runtime configuration without a NAT gateway.
+The public Application Load Balancer accepts HTTP on port 80 and forwards browser paths to the frontend target group. Frontend Nginx proxies `/api/*`, `/dav*`, and `/.well-known/caldav*` to a private internal ALB on port 8080. The internal ALB distributes requests across the backend ASG in private backend subnets. Frontend and backend health checks use `/health` and `/api/v1/info`, respectively. The RDS security group allows MySQL only from the backend security group. The S3 gateway endpoint lets the instances download their respective bundles and private runtime configuration without a NAT gateway.
 
 ## Current implementation
 
 Terraform creates:
 
 - the VPC, six subnets, internet gateway, and route tables;
-- an internet-facing ALB, listener, frontend/backend target groups, API path rule, health checks, and tier security groups;
+- an internet-facing public ALB, a private internal ALB, frontend/backend target groups, health checks, and tier security groups;
 - separate frontend and backend launch templates and Auto Scaling groups, each with a desired/minimum capacity of two and maximum capacity of four across both AZs;
 - CPU target-tracking policies for both groups and rolling instance refreshes when launch templates change; Terraform does not wait for ASG desired capacity because AWS Academy may block the ASG service-linked-role validation;
 - encrypted gp3 root volumes and the AWS Academy `LabInstanceProfile` for all instances;
